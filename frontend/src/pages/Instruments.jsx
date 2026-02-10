@@ -1,0 +1,559 @@
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Button, Modal, Form, Alert, Badge, ButtonGroup } from 'react-bootstrap';
+import NavigationBar from '../components/Navbar';
+import { useAuth } from '../context/AuthContext';
+import { getInstruments, createInstrument, updateInstrument, deleteInstrument, getCategories } from '../utils/api';
+
+const Instruments = () => {
+  const { user } = useAuth();
+  const [instruments, setInstruments] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [filteredInstruments, setFilteredInstruments] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    category_id: '',
+    condition: 'Baik',
+    stock: '',
+    description: '',
+    price_per_day: ''
+  });
+  const [imageFile, setImageFile] = useState(null);
+
+  useEffect(() => {
+    loadInstruments();
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    filterInstruments();
+  }, [instruments, selectedCategory, searchQuery]);
+
+  const loadInstruments = async () => {
+    try {
+      const response = await getInstruments();
+      setInstruments(response.data);
+    } catch (error) {
+      setError('Gagal memuat data alat musik');
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const response = await getCategories();
+      setCategories(response.data);
+    } catch (error) {
+      console.error('Gagal memuat kategori');
+    }
+  };
+
+  const filterInstruments = () => {
+    let filtered = instruments;
+
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(item => item.category === selectedCategory);
+    }
+
+    if (searchQuery) {
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    setFilteredInstruments(filtered);
+  };
+
+  const handleShowModal = (instrument = null) => {
+    if (instrument) {
+      setEditingId(instrument.id);
+      setFormData({
+        name: instrument.name,
+        category_id: instrument.category_id || '',
+        condition: instrument.condition,
+        stock: instrument.stock,
+        description: instrument.description || '',
+        price_per_day: instrument.price_per_day || ''
+      });
+    } else {
+      setEditingId(null);
+      setFormData({
+        name: '',
+        category_id: '',
+        condition: 'Baik',
+        stock: '',
+        description: '',
+        price_per_day: ''
+      });
+    }
+    setImageFile(null);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setError('');
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleFileChange = (e) => {
+    setImageFile(e.target.files[0]);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    try {
+      const data = new FormData();
+      data.append('name', formData.name);
+      data.append('category_id', formData.category_id);
+      data.append('condition', formData.condition);
+      data.append('stock', formData.stock);
+      data.append('description', formData.description);
+      data.append('price_per_day', formData.price_per_day);
+      if (imageFile) {
+        data.append('image', imageFile);
+      }
+
+      if (editingId) {
+        await updateInstrument(editingId, data);
+        setSuccess('Alat musik berhasil diupdate');
+      } else {
+        await createInstrument(data);
+        setSuccess('Alat musik berhasil ditambahkan');
+      }
+
+      handleCloseModal();
+      loadInstruments();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Terjadi kesalahan');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus alat musik ini?')) {
+      try {
+        await deleteInstrument(id);
+        setSuccess('Alat musik berhasil dihapus');
+        loadInstruments();
+        setTimeout(() => setSuccess(''), 3000);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Gagal menghapus alat musik');
+      }
+    }
+  };
+
+  const getStockBadge = (stock) => {
+    if (stock === 0) {
+      return <Badge bg="danger" className="badge-modern">Habis</Badge>;
+    } else if (stock <= 2) {
+      return <Badge bg="warning" text="dark" className="badge-modern">Terbatas</Badge>;
+    } else {
+      return <Badge bg="success" className="badge-modern">Tersedia</Badge>;
+    }
+  };
+
+  const getConditionBadge = (condition) => {
+    const conditionMap = {
+      'Baik': 'success',
+      'Cukup': 'warning',
+      'Rusak': 'danger'
+    };
+    return <Badge bg={conditionMap[condition] || 'secondary'} className="badge-modern">{condition}</Badge>;
+  };
+
+  const getCategoryIcon = (categoryName) => {
+    const category = categories.find(c => c.name === categoryName);
+    return category ? category.icon : '🎵';
+  };
+
+  const getCategoryColor = (categoryName) => {
+    const category = categories.find(c => c.name === categoryName);
+    return category ? category.color : '#6c757d';
+  };
+
+  const canEdit = user.role === 'admin' || user.role === 'petugas';
+
+  return (
+    <>
+      <NavigationBar />
+      <Container fluid className="px-4 fade-in">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h1 className="display-6 fw-bold mb-2">🎸 Katalog Alat Musik</h1>
+            <p className="text-muted mb-0">Temukan alat musik favoritmu</p>
+          </div>
+          {canEdit && (
+            <Button
+              variant="primary"
+              onClick={() => handleShowModal()}
+              className="btn-modern shadow"
+              size="lg"
+            >
+              <i className="bi bi-plus-circle me-2"></i>
+              Tambah Alat
+            </Button>
+          )}
+        </div>
+
+        {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
+        {success && <Alert variant="success" dismissible onClose={() => setSuccess('')}>{success}</Alert>}
+
+        <Card className="border-0 shadow-sm mb-4">
+          <Card.Body>
+            <Row className="align-items-center g-3">
+              <Col md={6}>
+                <div className="position-relative">
+                  <i className="bi bi-search position-absolute top-50 translate-middle-y ms-3"></i>
+                  <Form.Control
+                    type="text"
+                    placeholder="Cari alat musik..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="ps-5"
+                    style={{ borderRadius: '12px' }}
+                  />
+                </div>
+              </Col>
+              <Col md={4}>
+                <Form.Select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  style={{ borderRadius: '12px' }}
+                >
+                  <option value="all">🎵 Semua Kategori</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.name}>
+                      {cat.icon} {cat.name}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Col>
+              <Col md={2}>
+                <ButtonGroup className="w-100">
+                  <Button
+                    variant={viewMode === 'grid' ? 'primary' : 'outline-secondary'}
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <i className="bi bi-grid-3x3-gap"></i>
+                  </Button>
+                  <Button
+                    variant={viewMode === 'table' ? 'primary' : 'outline-secondary'}
+                    onClick={() => setViewMode('table')}
+                  >
+                    <i className="bi bi-list-ul"></i>
+                  </Button>
+                </ButtonGroup>
+              </Col>
+            </Row>
+          </Card.Body>
+        </Card>
+
+        <div className="mb-5">
+          <h5 className="fw-bold mb-3">Kategori Populer</h5>
+          <Row className="g-3">
+            {categories.slice(0, 4).map(category => {
+              const count = instruments.filter(i => i.category === category.name).length;
+              return (
+                <Col key={category.id} md={3} sm={6}>
+                  <Card
+                    className="category-card border-0 shadow-sm h-100"
+                    style={{
+                      background: `linear-gradient(135deg, ${category.color}20 0%, ${category.color}40 100%)`
+                    }}
+                    onClick={() => setSelectedCategory(category.name)}
+                  >
+                    <Card.Body className="text-center py-4">
+                      <div style={{ fontSize: '3rem' }}>{category.icon}</div>
+                      <h6 className="fw-bold mt-2 mb-1">{category.name}</h6>
+                      <small className="text-muted">{count} Alat</small>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              );
+            })}
+          </Row>
+        </div>
+
+        {viewMode === 'grid' ? (
+          <Row className="g-4">
+            {filteredInstruments.length === 0 ? (
+              <Col xs={12}>
+                <Card className="border-0 shadow-sm text-center py-5">
+                  <Card.Body>
+                    <div style={{ fontSize: '4rem', opacity: 0.3 }}>🎵</div>
+                    <h5 className="text-muted mt-3">Tidak ada alat musik</h5>
+                  </Card.Body>
+                </Card>
+              </Col>
+            ) : (
+              filteredInstruments.map((instrument) => (
+                <Col key={instrument.id} lg={3} md={4} sm={6}>
+                  <Card className="instrument-card border-0 shadow-sm h-100">
+                    <div
+                      className="p-4 text-center"
+                      style={{
+                        background: `linear-gradient(135deg, ${getCategoryColor(instrument.category)}20 0%, ${getCategoryColor(instrument.category)}40 100%)`,
+                        minHeight: '150px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <div style={{ fontSize: '4rem' }}>
+                        {getCategoryIcon(instrument.category)}
+                      </div>
+                    </div>
+                    <Card.Body>
+                      <div className="d-flex justify-content-between align-items-start mb-2">
+                        <Badge
+                          style={{ backgroundColor: getCategoryColor(instrument.category) }}
+                          className="badge-modern"
+                        >
+                          {instrument.category}
+                        </Badge>
+                        {getStockBadge(instrument.stock)}
+                      </div>
+                      <h5 className="fw-bold mb-2">{instrument.name}</h5>
+                      <p className="text-muted small mb-3" style={{ minHeight: '40px' }}>
+                        {instrument.description}
+                      </p>
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                          <small className="text-muted d-block">Kondisi</small>
+                          {getConditionBadge(instrument.condition)}
+                        </div>
+                        <div className="text-end">
+                          <small className="text-muted d-block">Stok</small>
+                          <span className="fw-bold">{instrument.stock}</span>
+                        </div>
+                      </div>
+                      {instrument.price && (
+                        <div className="mb-3">
+                          <small className="text-muted">Harga Sewa/Hari</small>
+                          <h6 className="fw-bold text-primary mb-0">
+                            Rp {parseInt(instrument.price).toLocaleString('id-ID')}
+                          </h6>
+                        </div>
+                      )}
+                      {canEdit && (
+                        <div className="d-grid gap-2">
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() => handleShowModal(instrument)}
+                          >
+                            <i className="bi bi-pencil me-2"></i>Edit
+                          </Button>
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            onClick={() => handleDelete(instrument.id)}
+                          >
+                            <i className="bi bi-trash me-2"></i>Hapus
+                          </Button>
+                        </div>
+                      )}
+                    </Card.Body>
+                  </Card>
+                </Col>
+              ))
+            )}
+          </Row>
+        ) : (
+          <Card className="border-0 shadow-sm">
+            <Card.Body className="p-0">
+              <div className="table-responsive">
+                <table className="table table-hover mb-0">
+                  <thead className="table-modern">
+                    <tr>
+                      <th>Alat Musik</th>
+                      <th>Kategori</th>
+                      <th>Kondisi</th>
+                      <th>Stok</th>
+                      <th>Harga</th>
+                      {canEdit && <th>Aksi</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredInstruments.map((instrument) => (
+                      <tr key={instrument.id}>
+                        <td>
+                          <div className="d-flex align-items-center">
+                            <div className="me-3" style={{ fontSize: '2rem' }}>
+                              {getCategoryIcon(instrument.category)}
+                            </div>
+                            <div>
+                              <div className="fw-bold">{instrument.name}</div>
+                              <small className="text-muted">{instrument.description}</small>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <Badge
+                            style={{ backgroundColor: getCategoryColor(instrument.category) }}
+                          >
+                            {instrument.category}
+                          </Badge>
+                        </td>
+                        <td>{getConditionBadge(instrument.condition)}</td>
+                        <td>{getStockBadge(instrument.stock)} <span className="ms-2">{instrument.stock}</span></td>
+                        <td>
+                          {instrument.price ?
+                            `Rp ${parseInt(instrument.price).toLocaleString('id-ID')}` : '-'}
+                        </td>
+                        {canEdit && (
+                          <td>
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              className="me-2"
+                              onClick={() => handleShowModal(instrument)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleDelete(instrument.id)}
+                            >
+                              Hapus
+                            </Button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card.Body>
+          </Card>
+        )}
+
+        <Modal show={showModal} onHide={handleCloseModal} size="lg" className="modal-modern">
+          <Modal.Header closeButton>
+            <Modal.Title>{editingId ? 'Edit' : 'Tambah'} Alat Musik</Modal.Title>
+          </Modal.Header>
+          <Form onSubmit={handleSubmit} className="form-modern">
+            <Modal.Body>
+              {error && <Alert variant="danger">{error}</Alert>}
+
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold">Nama *</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold">Kategori *</Form.Label>
+                    <Form.Select
+                      name="category_id"
+                      value={formData.category_id}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Pilih</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.icon} {cat.name}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row>
+                <Col md={4}>
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold">Kondisi *</Form.Label>
+                    <Form.Select
+                      name="condition"
+                      value={formData.condition}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="Baik">Baik</option>
+                      <option value="Cukup">Cukup</option>
+                      <option value="Rusak">Rusak</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                <Col md={4}>
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold">Stok *</Form.Label>
+                    <Form.Control
+                      type="number"
+                      name="stock"
+                      value={formData.stock}
+                      onChange={handleChange}
+                      required
+                      min="0"
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={4}>
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold">Harga/Hari</Form.Label>
+                    <Form.Control
+                      type="number"
+                      name="price_per_day"
+                      value={formData.price_per_day}
+                      onChange={handleChange}
+                      min="0"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold">Deskripsi</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                />
+              </Form.Group>
+
+              <Form.Group>
+                <Form.Label className="fw-semibold">Gambar</Form.Label>
+                <Form.Control
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
+              </Form.Group>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={handleCloseModal}>Batal</Button>
+              <Button variant="primary" type="submit">{editingId ? 'Update' : 'Simpan'}</Button>
+            </Modal.Footer>
+          </Form>
+        </Modal>
+      </Container>
+    </>
+  );
+};
+
+export default Instruments;
