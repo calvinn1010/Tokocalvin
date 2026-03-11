@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getInstruments, getRentals, getUsers, getCategories } from '../utils/api';
 import NavigationBar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -80,26 +81,28 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <>
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <NavigationBar />
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <div className="spinner-border text-primary loading-spinner" role="status">
             <span className="visually-hidden">Loading...</span>
           </div>
         </div>
-      </>
+        <Footer />
+      </div>
     );
   }
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <NavigationBar />
-      <Container fluid className="px-4 fade-in">
+      <div style={{ flex: 1 }}>
+        <Container fluid className="px-4 fade-in">
         {/* Welcome Section */}
         <div className="mb-4">
           <h1 className="display-5 fw-bold gradient-text">Selamat Datang! 👋</h1>
           <p className="text-muted fs-5">{user.fullName}</p>
-          <Badge bg="primary" className="badge-modern">{user.role.toUpperCase()}</Badge>
+          <Badge bg="primary" className="badge-modern">{user?.role?.toUpperCase()}</Badge>
         </div>
 
         {/* Stats Cards */}
@@ -363,8 +366,10 @@ const Dashboard = () => {
             </Col>
           </Row>
         )}
-      </Container>
-    </>
+        </Container>
+      </div>
+      <Footer />
+    </div>
   );
 };
 

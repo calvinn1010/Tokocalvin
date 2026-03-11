@@ -25,6 +25,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/instruments', require('./routes/instruments'));
 app.use('/api/rentals', require('./routes/rentals'));
 app.use('/api/categories', require('./routes/categories'));
+app.use('/api/fines', require('./routes/fines'));
 
 // Log all requests for debugging 404s
 app.use((req, res, next) => {

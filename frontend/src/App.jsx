@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
@@ -10,6 +11,8 @@ import Dashboard from './pages/Dashboard';
 import Instruments from './pages/Instruments';
 import Rentals from './pages/Rentals';
 import Users from './pages/Users';
+import Fines from './pages/Fines';
+import Cart from './pages/Cart';
 
 // Bootstrap CSS
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -18,7 +21,8 @@ import './index.css';
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <CartProvider>
+        <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -59,10 +63,25 @@ function App() {
             }
           />
           
+          <Route
+            path="/fines"
+            element={
+              <ProtectedRoute roles={['admin', 'petugas']}>
+                <Fines />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/cart"
+            element={<Cart />}
+          />
+          
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
-      </Router>
+        </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }

@@ -61,6 +61,18 @@ async function initializeDatabase() {
             console.log('➕ Adding payment_date to rentals...');
             await dbConnection.query("ALTER TABLE rentals ADD COLUMN payment_date DATETIME NULL");
         }
+        if (!columnNames.includes('late_fee_per_day')) {
+            console.log('➕ Adding late_fee_per_day to rentals...');
+            await dbConnection.query("ALTER TABLE rentals ADD COLUMN late_fee_per_day DECIMAL(10,2) DEFAULT 0.00");
+        }
+        if (!columnNames.includes('late_days')) {
+            console.log('➕ Adding late_days to rentals...');
+            await dbConnection.query("ALTER TABLE rentals ADD COLUMN late_days INT DEFAULT 0");
+        }
+        if (!columnNames.includes('late_fee_total')) {
+            console.log('➕ Adding late_fee_total to rentals...');
+            await dbConnection.query("ALTER TABLE rentals ADD COLUMN late_fee_total DECIMAL(10,2) DEFAULT 0.00");
+        }
 
         console.log('✅ Database schema applied successfully');
         await dbConnection.end();

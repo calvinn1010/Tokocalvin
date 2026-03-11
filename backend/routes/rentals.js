@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const RentalController = require('../controllers/RentalController2');
-const { auth, checkRole } = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
+const checkRole = require('../middleware/checkRole');
 
 // Get all rentals
 router.get('/', auth, RentalController.getAllRentals);

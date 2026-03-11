@@ -49,8 +49,20 @@ export const deleteInstrument = (id) => api.delete(`/instruments/${id}`);
 export const getRentals = () => api.get('/rentals');
 export const getRental = (id) => api.get(`/rentals/${id}`);
 export const createRental = (rentalData) => api.post('/rentals', rentalData);
+export const createBulkRentals = (rentalsData) => {
+  // Create multiple rentals from cart items
+  return Promise.all(rentalsData.map(rentalData => createRental(rentalData)));
+};
 export const updateRentalStatus = (id, status) => api.put(`/rentals/${id}/status`, { status });
 export const deleteRental = (id) => api.delete(`/rentals/${id}`);
 
 // Category functions
 export const getCategories = () => api.get('/categories');
+
+// Fine functions
+export const getFines = () => api.get('/fines');
+export const getFineSettings = () => api.get('/fines/settings');
+export const updateFineSettings = (settings) => api.put('/fines/settings', settings);
+export const calculateFine = (id, data) => api.post(`/fines/${id}/calculate`, data);
+export const markFinePaid = (id) => api.put(`/fines/${id}/pay`);
+export const getFineStats = () => api.get('/fines/stats');

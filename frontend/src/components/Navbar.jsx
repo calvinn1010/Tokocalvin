@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
+import { Navbar, Nav, Container, NavDropdown, Badge } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 const NavigationBar = () => {
   const { user, logout } = useAuth();
+  const { cartItemsTotalQuantity } = useCart();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -33,17 +35,33 @@ const NavigationBar = () => {
             <Nav.Link as={Link} to="/rentals" className="mx-2 fw-medium">
               <i className="bi bi-calendar-check me-2"></i>Peminjaman
             </Nav.Link>
+            {(user.role === 'admin' || user.role === 'petugas') && (
+              <Nav.Link as={Link} to="/fines" className="mx-2 fw-medium">
+                <i className="bi bi-cash me-2"></i>Denda
+              </Nav.Link>
+            )}
             {user.role === 'admin' && (
               <Nav.Link as={Link} to="/users" className="mx-2 fw-medium">
                 <i className="bi bi-people me-2"></i>Kelola User
               </Nav.Link>
             )}
           </Nav>
+          <Nav className="ms-auto">
+            <Nav.Link as={Link} to="/cart" className="mx-2 fw-medium position-relative" style={{ marginRight: '20px' }}>
+              <i className="bi bi-cart-fill me-2" style={{ fontSize: '1.3rem' }}></i>
+              Keranjang
+              {cartItemsTotalQuantity > 0 && (
+                <Badge bg="danger" className="position-absolute" style={{ top: '-5px', right: '5px', padding: '4px 8px', fontSize: '0.8rem' }}>
+                  {cartItemsTotalQuantity}
+                </Badge>
+              )}
+            </Nav.Link>
+          </Nav>
           <Nav>
             <NavDropdown 
               title={
                 <span>
-                  <span className="badge bg-primary me-2">{user.role.toUpperCase()}</span>
+                  <span className="badge bg-primary me-2">{user?.role?.toUpperCase()}</span>
                   {user.fullName}
                 </span>
               } 

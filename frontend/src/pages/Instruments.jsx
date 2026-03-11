@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Modal, Form, Alert, Badge, ButtonGroup } from 'react-bootstrap';
 import NavigationBar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { getInstruments, createInstrument, updateInstrument, deleteInstrument, getCategories } from '../utils/api';
+import Footer from '../components/Footer';
 
 const Instruments = () => {
   const { user } = useAuth();
+  const { addToCart } = useCart();
   const [instruments, setInstruments] = useState([]);
   const [categories, setCategories] = useState([]);
   const [filteredInstruments, setFilteredInstruments] = useState([]);
@@ -16,6 +19,7 @@ const Instruments = () => {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [addToCartSuccess, setAddToCartSuccess] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     category_id: '',
@@ -154,6 +158,12 @@ const Instruments = () => {
     }
   };
 
+  const handleAddToCart = (instrument) => {
+    addToCart(instrument);
+    setAddToCartSuccess(`${instrument.name} ditambahkan ke keranjang!`);
+    setTimeout(() => setAddToCartSuccess(''), 3000);
+  };
+
   const getStockBadge = (stock) => {
     if (stock === 0) {
       return <Badge bg="danger" className="badge-modern">Habis</Badge>;
@@ -184,11 +194,13 @@ const Instruments = () => {
   };
 
   const canEdit = user.role === 'admin' || user.role === 'petugas';
+  const isUser = user.role === 'user';
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <NavigationBar />
-      <Container fluid className="px-4 fade-in">
+      <div style={{ flex: 1 }}>
+        <Container fluid className="px-4 fade-in">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
             <h1 className="display-6 fw-bold mb-2">🎸 Katalog Alat Musik</h1>
@@ -209,6 +221,7 @@ const Instruments = () => {
 
         {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
         {success && <Alert variant="success" dismissible onClose={() => setSuccess('')}>{success}</Alert>}
+        {addToCartSuccess && <Alert variant="info" dismissible onClose={() => setAddToCartSuccess('')}><i className="bi bi-check-circle me-2"></i>{addToCartSuccess}</Alert>}
 
         <Card className="border-0 shadow-sm mb-4">
           <Card.Body>
@@ -347,24 +360,48 @@ const Instruments = () => {
                           </h6>
                         </div>
                       )}
-                      {canEdit && (
-                        <div className="d-grid gap-2">
+                      <div className="d-grid gap-2">
+                        {isUser && (
                           <Button
-                            variant="outline-primary"
+                            variant="info"
                             size="sm"
-                            onClick={() => handleShowModal(instrument)}
+                            onClick={() => handleAddToCart(instrument)}
+                            disabled={instrument.stock === 0}
+                            className="btn-modern"
                           >
-                            <i className="bi bi-pencil me-2"></i>Edit
+                            <i className="bi bi-cart-plus me-2"></i>Tambah ke Keranjang
                           </Button>
+                        )}
+                        {!isUser && (
                           <Button
-                            variant="outline-danger"
+                            variant="secondary"
                             size="sm"
-                            onClick={() => handleDelete(instrument.id)}
+                            disabled
+                            className="btn-modern"
+                            title="Hanya user yang dapat menambah ke keranjang"
                           >
-                            <i className="bi bi-trash me-2"></i>Hapus
+                            <i className="bi bi-eye me-2"></i>Lihat Saja (Admin/Petugas)
                           </Button>
-                        </div>
-                      )}
+                        )}
+                        {canEdit && (
+                          <>
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              onClick={() => handleShowModal(instrument)}
+                            >
+                              <i className="bi bi-pencil me-2"></i>Edit
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleDelete(instrument.id)}
+                            >
+                              <i className="bi bi-trash me-2"></i>Hapus
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </Card.Body>
                   </Card>
                 </Col>
@@ -413,25 +450,49 @@ const Instruments = () => {
                           {instrument.price ?
                             `Rp ${parseInt(instrument.price).toLocaleString('id-ID')}` : '-'}
                         </td>
-                        {canEdit && (
-                          <td>
+                        <td>
+                          {isUser && (
                             <Button
-                              variant="outline-primary"
+                              variant="info"
                               size="sm"
-                              className="me-2"
-                              onClick={() => handleShowModal(instrument)}
+                              onClick={() => handleAddToCart(instrument)}
+                              disabled={instrument.stock === 0}
+                              className="btn-modern me-2"
                             >
-                              Edit
+                              <i className="bi bi-cart-plus me-1"></i>Keranjang
                             </Button>
+                          )}
+                          {!isUser && (
                             <Button
-                              variant="outline-danger"
+                              variant="secondary"
                               size="sm"
-                              onClick={() => handleDelete(instrument.id)}
+                              disabled
+                              className="btn-modern me-2"
+                              title="Hanya user yang dapat menambah ke keranjang"
                             >
-                              Hapus
+                              <i className="bi bi-eye me-1"></i>Lihat
                             </Button>
-                          </td>
-                        )}
+                          )}
+                          {canEdit && (
+                            <>
+                              <Button
+                                variant="outline-primary"
+                                size="sm"
+                                className="me-2"
+                                onClick={() => handleShowModal(instrument)}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="outline-danger"
+                                size="sm"
+                                onClick={() => handleDelete(instrument.id)}
+                              >
+                                Hapus
+                              </Button>
+                            </>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -551,8 +612,10 @@ const Instruments = () => {
             </Modal.Footer>
           </Form>
         </Modal>
-      </Container>
-    </>
+        </Container>
+      </div>
+      <Footer />
+    </div>
   );
 };
 

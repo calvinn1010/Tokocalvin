@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../database/db');
-const { auth, checkRole } = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
+const checkRole = require('../middleware/checkRole');
 const upload = require('../middleware/upload');
 
 // Get all instruments
@@ -59,8 +60,13 @@ router.post('/', auth, checkRole('admin', 'petugas'), upload.single('image'), as
   try {
     const { name, category_id, condition, stock, description, price_per_day, brand } = req.body;
 
-    if (!name || !category_id || !condition || !stock) {
+    if (!name || !category_id || !condition || stock === undefined || stock === null || stock === '') {
       return res.status(400).json({ message: 'Data tidak lengkap' });
+    }
+
+    const stockNum = parseInt(stock);
+    if (isNaN(stockNum) || stockNum < 0) {
+      return res.status(400).json({ message: 'Stok harus berupa angka positif' });
     }
 
     const image = req.file ? `/uploads/${req.file.filename}` : null;
@@ -68,7 +74,7 @@ router.post('/', auth, checkRole('admin', 'petugas'), upload.single('image'), as
     const [result] = await pool.query(
       `INSERT INTO instruments (name, category_id, \`condition\`, stock, description, price_per_day, brand, image)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, category_id, condition, stock, description, price_per_day || 0, brand || '', image]
+      [name, category_id, condition, stockNum, description, price_per_day || 0, brand || '', image]
     );
 
     const [newRows] = await pool.query('SELECT * FROM instruments WHERE id = ?', [result.insertId]);

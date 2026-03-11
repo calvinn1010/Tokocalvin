@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Table, Button, Modal, Form, Alert, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Button, Modal, Form, Alert, Badge } from 'react-bootstrap';
 import NavigationBar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { getRentals, createRental, updateRentalStatus, deleteRental, getInstruments } from '../utils/api';
+import Footer from '../components/Footer';
 
 const Rentals = () => {
   const { user } = useAuth();
@@ -29,10 +30,8 @@ const Rentals = () => {
   const loadRentals = async () => {
     try {
       const response = await getRentals();
-      // backend may return { success: true, data: [...] } or directly [...]
       const payload = response.data && response.data.data ? response.data.data : response.data;
 
-      // Normalize rentals so frontend can rely on consistent shape
       const normalized = (payload || []).map(r => ({
         id: r.id,
         userId: r.user_id ?? r.userId ?? r.user?.id,
@@ -92,14 +91,12 @@ const Rentals = () => {
     const { name, value } = e.target;
     const newFormData = { ...formData, [name]: value };
 
-    // Auto-calculate payment amount when instrument, start date, or end date changes
     if ((name === 'instrumentId' || name === 'startDate' || name === 'endDate') && newFormData.instrumentId && newFormData.startDate && newFormData.endDate) {
       const selectedInstrument = instruments.find(i => i.id === parseInt(newFormData.instrumentId));
       if (selectedInstrument) {
         const start = new Date(newFormData.startDate);
         const end = new Date(newFormData.endDate);
 
-        // Ensure dates are valid and end is after start
         if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start) {
           const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
           const price = selectedInstrument.price_per_day || selectedInstrument.price || 0;
@@ -155,51 +152,143 @@ const Rentals = () => {
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      pending: { bg: 'warning', text: 'Menunggu' },
-      approved: { bg: 'success', text: 'Disetujui' },
-      rejected: { bg: 'danger', text: 'Ditolak' },
-      returned: { bg: 'secondary', text: 'Dikembalikan' }
+      pending: { bg: 'warning', icon: 'clock', text: 'Menunggu' },
+      approved: { bg: 'success', icon: 'check-circle', text: 'Disetujui' },
+      rejected: { bg: 'danger', icon: 'x-circle', text: 'Ditolak' },
+      returned: { bg: 'secondary', icon: 'check-all', text: 'Dikembalikan' }
     };
-    const statusInfo = statusMap[status] || { bg: 'secondary', text: status };
-    return <Badge bg={statusInfo.bg}>{statusInfo.text}</Badge>;
+    const statusInfo = statusMap[status] || { bg: 'secondary', icon: 'info', text: status };
+    return (
+      <Badge bg={statusInfo.bg} className="badge-modern">
+        <i className={`bi bi-${statusInfo.icon} me-1`}></i>
+        {statusInfo.text}
+      </Badge>
+    );
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('id-ID');
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   const canApprove = user.role === 'admin' || user.role === 'petugas';
+  const pendingCount = rentals.filter(r => r.status === 'pending').length;
+  const approvedCount = rentals.filter(r => r.status === 'approved').length;
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <NavigationBar />
-      <Container>
+      <div style={{ flex: 1 }}>
+        <Container fluid className="px-4 fade-in">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
-            <h1 className="display-6 fw-bold">{user.role === 'admin' ? 'Persetujuan Peminjaman' : 'Daftar Peminjaman'}</h1>
-            <p className="text-muted">{user.role === 'admin' ? 'Kelola persetujuan peminjaman' : 'Kelola peminjaman alat musik'}</p>
+            <h1 className="display-6 fw-bold mb-2">
+              {canApprove ? '📋 Persetujuan Peminjaman' : '🎵 Daftar Peminjaman'}
+            </h1>
+            <p className="text-muted mb-0">
+              {canApprove ? 'Kelola dan persetujui peminjaman alat musik' : 'Kelola peminjaman alat musik Anda'}
+            </p>
           </div>
           {user.role === 'user' && (
-            <Button variant="primary" onClick={handleShowModal}>
-              + Ajukan Peminjaman
+            <Button 
+              variant="primary" 
+              onClick={handleShowModal}
+              className="btn-modern shadow"
+              size="lg"
+            >
+              <i className="bi bi-plus-circle me-2"></i>
+              Ajukan Peminjaman
             </Button>
           )}
         </div>
 
-        {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
-        {success && <Alert variant="success" dismissible onClose={() => setSuccess('')}>{success}</Alert>}
+        {error && <Alert variant="danger" dismissible onClose={() => setError('')} className="mb-4">{error}</Alert>}
+        {success && <Alert variant="success" dismissible onClose={() => setSuccess('')} className="mb-4">{success}</Alert>}
 
-        <div className="card border-0 shadow-sm">
-          <div className="card-body p-0">
+        {/* Stats Cards for Admin/Petugas */}
+        {canApprove && (
+          <Row className="g-4 mb-5">
+            <Col md={3}>
+              <Card className="border-0 shadow-sm stats-card h-100" style={{ background: 'linear-gradient(135deg, #fff093 0%, #ffc107 100%)' }}>
+                <Card.Body className="text-dark">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div>
+                      <p className="mb-1 opacity-75">Menunggu Persetujuan</p>
+                      <h2 className="fw-bold mb-0">{pendingCount}</h2>
+                    </div>
+                    <div className="bg-dark bg-opacity-10 rounded-circle p-3">
+                      <i className="bi bi-hourglass-split fs-3"></i>
+                    </div>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={3}>
+              <Card className="border-0 shadow-sm stats-card h-100" style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+                <Card.Body className="text-dark">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div>
+                      <p className="mb-1 opacity-75">Disetujui</p>
+                      <h2 className="fw-bold mb-0">{approvedCount}</h2>
+                    </div>
+                    <div className="bg-dark bg-opacity-10 rounded-circle p-3">
+                      <i className="bi bi-check-circle fs-3"></i>
+                    </div>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={3}>
+              <Card className="border-0 shadow-sm stats-card h-100" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+                <Card.Body className="text-dark">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div>
+                      <p className="mb-1 opacity-75">Total Peminjaman</p>
+                      <h2 className="fw-bold mb-0">{rentals.length}</h2>
+                    </div>
+                    <div className="bg-dark bg-opacity-10 rounded-circle p-3">
+                      <i className="bi bi-list-check fs-3"></i>
+                    </div>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={3}>
+              <Card className="border-0 shadow-sm stats-card h-100" style={{ background: 'linear-gradient(135deg, #fa709a  0%, #fee140 100%)' }}>
+                <Card.Body className="text-dark">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div>
+                      <p className="mb-1 opacity-75">Selesai</p>
+                      <h2 className="fw-bold mb-0">{rentals.filter(r => r.status === 'returned').length}</h2>
+                    </div>
+                    <div className="bg-dark bg-opacity-10 rounded-circle p-3">
+                      <i className="bi bi-check-all fs-3"></i>
+                    </div>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        )}
+
+        <Card className="border-0 shadow-sm">
+          <Card.Header className="bg-transparent border-bottom">
+            <h5 className="mb-0 fw-bold">
+              <i className="bi bi-table me-2 text-primary"></i>
+              Daftar {canApprove ? 'Persetujuan' : ''} Peminjaman
+            </h5>
+          </Card.Header>
+          <Card.Body className="p-0">
             <div className="table-responsive">
               <Table hover className="mb-0">
-                <thead className="bg-light">
+                <thead className="table-modern">
                   <tr>
-                    <th>ID</th>
                     <th>Peminjam</th>
                     <th>Alat Musik</th>
-                    <th>Tanggal Mulai</th>
-                    <th>Tanggal Selesai</th>
+                    <th>Periode</th>
                     {user.role === 'user' && (
                       <>
                         <th>Biaya</th>
@@ -213,14 +302,14 @@ const Rentals = () => {
                 <tbody>
                   {rentals.length === 0 ? (
                     <tr>
-                      <td colSpan={user.role === 'user' ? '9' : '7'} className="text-center py-4 text-muted">
-                        Tidak ada data peminjaman
+                      <td colSpan={user.role === 'user' ? '7' : '5'} className="text-center py-5">
+                        <div style={{ fontSize: '3rem', opacity: 0.3 }}>📋</div>
+                        <p className="text-muted mb-0 mt-2">Tidak ada data peminjaman</p>
                       </td>
                     </tr>
                   ) : (
                     rentals.map((rental) => (
                       <tr key={rental.id}>
-                        <td>{rental.id}</td>
                         <td>
                           {rental.user ? (
                             <div>
@@ -237,14 +326,19 @@ const Rentals = () => {
                             </div>
                           ) : '-'}
                         </td>
-                        <td>{formatDate(rental.startDate)}</td>
-                        <td>{formatDate(rental.endDate)}</td>
+                        <td>
+                          <div>
+                            <small className="text-muted">Mulai: {formatDate(rental.startDate)}</small>
+                            <br />
+                            <small className="text-muted">Selesai: {formatDate(rental.endDate)}</small>
+                          </div>
+                        </td>
                         {user.role === 'user' && (
                           <>
                             <td>
                               {rental.totalPrice ? (
                                 <div>
-                                  <div className="fw-semibold">Rp {parseFloat(rental.totalPrice).toLocaleString('id-ID')}</div>
+                                  <div className="fw-semibold text-primary">Rp {parseFloat(rental.totalPrice).toLocaleString('id-ID')}</div>
                                   <small className="text-muted">{rental.totalDays} hari</small>
                                 </div>
                               ) : '-'}
@@ -252,11 +346,10 @@ const Rentals = () => {
                             <td>
                               {rental.paymentStatus ? (
                                 <div>
-                                  <Badge bg={rental.paymentStatus === 'completed' ? 'success' : rental.paymentStatus === 'pending' ? 'warning' : 'danger'}>
+                                  <Badge bg={rental.paymentStatus === 'completed' ? 'success' : rental.paymentStatus === 'pending' ? 'warning' : 'danger'} className="badge-modern">
+                                    <i className={`bi bi-${rental.paymentStatus === 'completed' ? 'check-circle' : rental.paymentStatus === 'pending' ? 'clock' : 'x-circle'} me-1`}></i>
                                     {rental.paymentStatus === 'completed' ? 'Terbayar' : rental.paymentStatus === 'pending' ? 'Menunggu' : 'Gagal'}
                                   </Badge>
-                                  <br />
-                                  <small className="text-muted">{rental.paymentMethod || 'Tunai'}</small>
                                 </div>
                               ) : (
                                 <span>-</span>
@@ -267,31 +360,34 @@ const Rentals = () => {
                         <td>{getStatusBadge(rental.status)}</td>
                         <td className="text-center">
                           {canApprove && rental.status === 'pending' && (
-                            <>
+                            <div className="btn-group btn-group-sm" role="group">
                               <Button
                                 variant="outline-success"
-                                size="sm"
-                                className="me-1"
+                                className="btn-modern"
                                 onClick={() => handleUpdateStatus(rental.id, 'approved')}
                               >
+                                <i className="bi bi-check-circle me-1"></i>
                                 Setujui
                               </Button>
                               <Button
                                 variant="outline-danger"
-                                size="sm"
+                                className="btn-modern"
                                 onClick={() => handleUpdateStatus(rental.id, 'rejected')}
                               >
+                                <i className="bi bi-x-circle me-1"></i>
                                 Tolak
                               </Button>
-                            </>
+                            </div>
                           )}
                           {canApprove && rental.status === 'approved' && (
                             <Button
                               variant="outline-secondary"
                               size="sm"
+                              className="btn-modern"
                               onClick={() => handleUpdateStatus(rental.id, 'returned')}
                             >
-                              Dikembalikan
+                              <i className="bi bi-check-all me-1"></i>
+                              Kembali
                             </Button>
                           )}
                           {((user.role === 'user' && rental.userId === user.id && rental.status === 'pending') ||
@@ -299,9 +395,10 @@ const Rentals = () => {
                               <Button
                                 variant="outline-danger"
                                 size="sm"
-                                className="ms-1"
+                                className="btn-modern"
                                 onClick={() => handleDelete(rental.id)}
                               >
+                                <i className="bi bi-trash me-1"></i>
                                 Hapus
                               </Button>
                             )}
@@ -312,26 +409,33 @@ const Rentals = () => {
                 </tbody>
               </Table>
             </div>
-          </div>
-        </div>
+          </Card.Body>
+        </Card>
 
-        <Modal show={showModal} onHide={handleCloseModal}>
-          <Modal.Header closeButton>
-            <Modal.Title>Ajukan Peminjaman</Modal.Title>
+        <Modal show={showModal} onHide={handleCloseModal} className="modal-modern" size="lg">
+          <Modal.Header closeButton style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+            <Modal.Title className="text-white">
+              <i className="bi bi-plus-circle me-2"></i>
+              Ajukan Peminjaman Baru
+            </Modal.Title>
           </Modal.Header>
-          <Form onSubmit={handleSubmit}>
+          <Form onSubmit={handleSubmit} className="form-modern">
             <Modal.Body>
-              {error && <Alert variant="danger">{error}</Alert>}
+              {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
 
-              <Form.Group className="mb-3">
-                <Form.Label>Alat Musik *</Form.Label>
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-semibold">
+                  <i className="bi bi-music-note-list me-2"></i>
+                  Alat Musik *
+                </Form.Label>
                 <Form.Select
                   name="instrumentId"
                   value={formData.instrumentId}
                   onChange={handleChange}
                   required
+                  size="lg"
                 >
-                  <option value="">Pilih alat musik</option>
+                  <option value="">Pilih alat musik...</option>
                   {instruments.map((instrument) => (
                     <option key={instrument.id} value={instrument.id}>
                       {instrument.name} - {instrument.category} (Stok: {instrument.stock})
@@ -340,82 +444,118 @@ const Rentals = () => {
                 </Form.Select>
               </Form.Group>
 
-              <Form.Group className="mb-3">
-                <Form.Label>Tanggal Mulai *</Form.Label>
-                <Form.Control
-                  type="date"
-                  name="startDate"
-                  value={formData.startDate}
-                  onChange={handleChange}
-                  required
-                  min={new Date().toISOString().split('T')[0]}
-                />
-              </Form.Group>
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-4">
+                    <Form.Label className="fw-semibold">
+                      <i className="bi bi-calendar-event me-2"></i>
+                      Tanggal Mulai *
+                    </Form.Label>
+                    <Form.Control
+                      type="date"
+                      name="startDate"
+                      value={formData.startDate}
+                      onChange={handleChange}
+                      required
+                      min={new Date().toISOString().split('T')[0]}
+                      size="lg"
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-4">
+                    <Form.Label className="fw-semibold">
+                      <i className="bi bi-calendar-check me-2"></i>
+                      Tanggal Selesai *
+                    </Form.Label>
+                    <Form.Control
+                      type="date"
+                      name="endDate"
+                      value={formData.endDate}
+                      onChange={handleChange}
+                      required
+                      min={formData.startDate || new Date().toISOString().split('T')[0]}
+                      size="lg"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
 
-              <Form.Group className="mb-3">
-                <Form.Label>Tanggal Selesai *</Form.Label>
-                <Form.Control
-                  type="date"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleChange}
-                  required
-                  min={formData.startDate || new Date().toISOString().split('T')[0]}
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Catatan</Form.Label>
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-semibold">
+                  <i className="bi bi-list-check me-2"></i>
+                  Catatan
+                </Form.Label>
                 <Form.Control
                   as="textarea"
                   rows={2}
                   name="notes"
                   value={formData.notes}
                   onChange={handleChange}
-                  placeholder="Keperluan peminjaman"
+                  placeholder="Keperluan peminjaman..."
                 />
               </Form.Group>
 
-              <hr className="my-3" />
-              <h6 className="mb-3 fw-bold">💳 Informasi Pembayaran</h6>
+              <hr className="my-4" />
+              <h6 className="mb-4 fw-bold">
+                <i className="bi bi-credit-card me-2"></i>
+                Informasi Pembayaran
+              </h6>
+
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-4">
+                    <Form.Label className="fw-semibold">
+                      <i className="bi bi-wallet2 me-2"></i>
+                      Metode Pembayaran *
+                    </Form.Label>
+                    <Form.Select
+                      name="paymentMethod"
+                      value={formData.paymentMethod}
+                      onChange={handleChange}
+                      required
+                      size="lg"
+                    >
+                      <option value="cash">💵 Tunai (Cash)</option>
+                    </Form.Select>
+                    <Form.Text className="text-muted">
+                      Pembayaran dilakukan saat pengambilan
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-4">
+                    <Form.Label className="fw-semibold">
+                      <i className="bi bi-cash-coin me-2"></i>
+                      Jumlah Pembayaran *
+                    </Form.Label>
+                    <Form.Control
+                      type="number"
+                      name="paymentAmount"
+                      value={formData.paymentAmount}
+                      onChange={handleChange}
+                      className="fw-bold"
+                      required
+                      step="0.01"
+                      min="0"
+                      size="lg"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
 
               <Form.Group className="mb-3">
-                <Form.Label>Metode Pembayaran *</Form.Label>
-                <Form.Select
-                  name="paymentMethod"
-                  value={formData.paymentMethod}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="cash">Tunai (Cash)</option>
-                </Form.Select>
-                <Form.Text className="text-muted">Pembayaran dilakukan saat pengambilan alat musik</Form.Text>
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Jumlah Pembayaran *</Form.Label>
-                <Form.Control
-                  type="number"
-                  name="paymentAmount"
-                  value={formData.paymentAmount}
-                  onChange={handleChange}
-                  className="fw-bold"
-                  required
-                  step="0.01"
-                  min="0"
-                />
-                <Form.Text className="text-muted">Dihitung otomatis dari durasi sewa & harga alat musik (bisa diubah jika diperlukan)</Form.Text>
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Catatan Pembayaran</Form.Label>
+                <Form.Label className="fw-semibold">
+                  <i className="bi bi-file-text me-2"></i>
+                  Catatan Pembayaran
+                </Form.Label>
                 <Form.Control
                   as="textarea"
                   rows={2}
                   name="paymentReceipt"
                   value={formData.paymentReceipt}
                   onChange={handleChange}
-                  placeholder="Contoh: Sudah siapkan uang cash, akan bayar H-1 pengambilan, dll"
+                  placeholder="Contoh: Sudah siapkan uang cash..."
                 />
               </Form.Group>
             </Modal.Body>
@@ -423,14 +563,17 @@ const Rentals = () => {
               <Button variant="secondary" onClick={handleCloseModal}>
                 Batal
               </Button>
-              <Button variant="primary" type="submit">
-                Ajukan
+              <Button variant="primary" type="submit" className="btn-modern">
+                <i className="bi bi-check-circle me-2"></i>
+                Ajukan Peminjaman
               </Button>
             </Modal.Footer>
           </Form>
         </Modal>
-      </Container>
-    </>
+        </Container>
+      </div>
+      <Footer />
+    </div>
   );
 };
 

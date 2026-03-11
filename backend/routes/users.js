@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { pool } = require('../database/db');
-const { auth, checkRole } = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
+const checkRole = require('../middleware/checkRole');
 
 // Get all users (Admin only)
 router.get('/', auth, checkRole('admin'), async (req, res) => {
@@ -102,23 +103,44 @@ router.put('/:id', auth, checkRole('admin'), async (req, res) => {
   }
 });
 
-// Delete user (Admin only)
+// Delete user (Admin only) - Cascade delete related records
 router.delete('/:id', auth, checkRole('admin'), async (req, res) => {
+  const connection = await pool.getConnection();
+  
   try {
+    await connection.beginTransaction();
+
     const id = req.params.id;
 
     if (parseInt(id) === req.user.id) {
+      await connection.rollback();
+      connection.release();
       return res.status(400).json({ message: 'Tidak bisa menghapus akun sendiri' });
     }
 
-    const [result] = await pool.query('DELETE FROM users WHERE id = ?', [id]);
-
-    if (result.affectedRows === 0) {
+    // Check if user exists
+    const [userExists] = await connection.query('SELECT id FROM users WHERE id = ?', [id]);
+    if (userExists.length === 0) {
+      await connection.rollback();
+      connection.release();
       return res.status(404).json({ message: 'User tidak ditemukan' });
     }
 
-    res.json({ message: 'User berhasil dihapus' });
+    // Delete rentals related to this user (includes fine data)
+    // Delete both where user_id (rentals by user) and approved_by (approvals by staff)
+    await connection.query('DELETE FROM rentals WHERE user_id = ? OR approved_by = ?', [id, id]);
+    
+    // Delete the user
+    const [result] = await connection.query('DELETE FROM users WHERE id = ?', [id]);
+
+    await connection.commit();
+    connection.release();
+
+    res.json({ message: 'User dan data terkaitnya berhasil dihapus' });
   } catch (error) {
+    await connection.rollback();
+    connection.release();
+    console.error('Delete user error:', error);
     res.status(500).json({ message: 'Terjadi kesalahan server', error: error.message });
   }
 });

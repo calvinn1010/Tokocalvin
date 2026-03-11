@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Table, Button, Modal, Form, Alert, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Button, Modal, Form, Alert, Badge } from 'react-bootstrap';
 import NavigationBar from '../components/Navbar';
 import { getUsers, createUser, updateUser, deleteUser } from '../utils/api';
+import Footer from '../components/Footer';
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -38,7 +39,7 @@ const Users = () => {
         email: user.email,
         password: '',
         role: user.role,
-        fullName: user.fullName
+        fullName: user.fullName || user.full_name
       });
     } else {
       setEditingId(null);
@@ -68,7 +69,6 @@ const Users = () => {
 
     try {
       if (editingId) {
-        // Jika edit dan password kosong, hapus dari formData
         const updateData = { ...formData };
         if (!updateData.password) {
           delete updateData.password;
@@ -103,44 +103,114 @@ const Users = () => {
 
   const getRoleBadge = (role) => {
     const roleMap = {
-      admin: { bg: 'danger', text: 'Admin' },
-      petugas: { bg: 'primary', text: 'Petugas' },
-      user: { bg: 'success', text: 'User' }
+      admin: { bg: 'danger', icon: 'shield-check', text: 'Admin' },
+      petugas: { bg: 'primary', icon: 'person-check', text: 'Petugas' },
+      user: { bg: 'success', icon: 'person', text: 'User' }
     };
-    const roleInfo = roleMap[role] || { bg: 'secondary', text: role };
-    return <Badge bg={roleInfo.bg}>{roleInfo.text}</Badge>;
+    const roleInfo = roleMap[role] || { bg: 'secondary', icon: 'person', text: role };
+    return (
+      <Badge bg={roleInfo.bg} className="badge-modern">
+        <i className={`bi bi-${roleInfo.icon} me-1`}></i>
+        {roleInfo.text}
+      </Badge>
+    );
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('id-ID');
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <NavigationBar />
-      <Container>
+      <div style={{ flex: 1 }}>
+        <Container fluid className="px-4 fade-in">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
-            <h1 className="display-6 fw-bold">Kelola User</h1>
-            <p className="text-muted">Manajemen pengguna sistem</p>
+            <h1 className="display-6 fw-bold mb-2">👥 Kelola User</h1>
+            <p className="text-muted mb-0">Manajemen pengguna sistem</p>
           </div>
-          <Button variant="primary" onClick={() => handleShowModal()}>
-            + Tambah User
+          <Button 
+            variant="primary" 
+            onClick={() => handleShowModal()} 
+            className="btn-modern shadow"
+            size="lg"
+          >
+            <i className="bi bi-plus-circle me-2"></i>
+            Tambah User
           </Button>
         </div>
 
-        {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
-        {success && <Alert variant="success" dismissible onClose={() => setSuccess('')}>{success}</Alert>}
+        {error && <Alert variant="danger" dismissible onClose={() => setError('')} className="mb-4">{error}</Alert>}
+        {success && <Alert variant="success" dismissible onClose={() => setSuccess('')} className="mb-4">{success}</Alert>}
 
-        <div className="card border-0 shadow-sm">
-          <div className="card-body p-0">
+        {/* User Stats */}
+        <Row className="g-4 mb-5">
+          <Col md={4}>
+            <Card className="border-0 shadow-sm stats-card h-100" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+              <Card.Body className="text-white">
+                <div className="d-flex justify-content-between align-items-start">
+                  <div>
+                    <p className="mb-1 opacity-75">Total User</p>
+                    <h2 className="fw-bold mb-0">{users.length}</h2>
+                  </div>
+                  <div className="bg-white bg-opacity-25 rounded-circle p-3">
+                    <i className="bi bi-people fs-3"></i>
+                  </div>
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={4}>
+            <Card className="border-0 shadow-sm stats-card h-100" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+              <Card.Body className="text-white">
+                <div className="d-flex justify-content-between align-items-start">
+                  <div>
+                    <p className="mb-1 opacity-75">Admin</p>
+                    <h2 className="fw-bold mb-0">{users.filter(u => u.role === 'admin').length}</h2>
+                  </div>
+                  <div className="bg-white bg-opacity-25 rounded-circle p-3">
+                    <i className="bi bi-shield-check fs-3"></i>
+                  </div>
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={4}>
+            <Card className="border-0 shadow-sm stats-card h-100" style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+              <Card.Body className="text-white">
+                <div className="d-flex justify-content-between align-items-start">
+                  <div>
+                    <p className="mb-1 opacity-75">Reguler User</p>
+                    <h2 className="fw-bold mb-0">{users.filter(u => u.role === 'user').length}</h2>
+                  </div>
+                  <div className="bg-white bg-opacity-25 rounded-circle p-3">
+                    <i className="bi bi-person-check fs-3"></i>
+                  </div>
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+
+        <Card className="border-0 shadow-sm">
+          <Card.Header className="bg-transparent border-bottom">
+            <h5 className="mb-0 fw-bold">
+              <i className="bi bi-list-ul me-2 text-primary"></i>
+              Daftar User
+            </h5>
+          </Card.Header>
+          <Card.Body className="p-0">
             <div className="table-responsive">
               <Table hover className="mb-0">
-                <thead className="bg-light">
+                <thead className="table-modern">
                   <tr>
-                    <th>ID</th>
-                    <th>Username</th>
                     <th>Nama Lengkap</th>
+                    <th>Username</th>
                     <th>Email</th>
                     <th>Role</th>
                     <th>Tanggal Daftar</th>
@@ -150,33 +220,52 @@ const Users = () => {
                 <tbody>
                   {users.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="text-center py-4 text-muted">
-                        Tidak ada data user
+                      <td colSpan="6" className="text-center py-5">
+                        <div style={{ fontSize: '3rem', opacity: 0.3 }}>👥</div>
+                        <p className="text-muted mb-0 mt-2">Tidak ada data user</p>
                       </td>
                     </tr>
                   ) : (
                     users.map((user) => (
                       <tr key={user.id}>
-                        <td>{user.id}</td>
-                        <td className="fw-semibold">{user.username}</td>
-                        <td>{user.fullName}</td>
-                        <td>{user.email}</td>
+                        <td>
+                          <div className="fw-semibold">{user.fullName || user.full_name}</div>
+                        </td>
+                        <td>
+                          <div className="d-flex align-items-center">
+                            <div 
+                              className="rounded-circle bg-primary bg-opacity-10 p-2 me-2"
+                              style={{ width: '32px', height: '32px' }}
+                            >
+                              <i className="bi bi-person text-primary"></i>
+                            </div>
+                            <span className="fw-semibold">{user.username}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <small className="text-muted">{user.email}</small>
+                        </td>
                         <td>{getRoleBadge(user.role)}</td>
-                        <td>{formatDate(user.createdAt)}</td>
+                        <td>
+                          <small className="text-muted">{formatDate(user.created_at || user.createdAt)}</small>
+                        </td>
                         <td className="text-center">
                           <Button
                             variant="outline-primary"
                             size="sm"
-                            className="me-2"
+                            className="me-2 btn-modern"
                             onClick={() => handleShowModal(user)}
                           >
+                            <i className="bi bi-pencil me-1"></i>
                             Edit
                           </Button>
                           <Button
                             variant="outline-danger"
                             size="sm"
+                            className="btn-modern"
                             onClick={() => handleDelete(user.id)}
                           >
+                            <i className="bi bi-trash me-1"></i>
                             Hapus
                           </Button>
                         </td>
@@ -186,52 +275,73 @@ const Users = () => {
                 </tbody>
               </Table>
             </div>
-          </div>
-        </div>
+          </Card.Body>
+        </Card>
 
-        <Modal show={showModal} onHide={handleCloseModal}>
-          <Modal.Header closeButton>
-            <Modal.Title>{editingId ? 'Edit' : 'Tambah'} User</Modal.Title>
+        <Modal show={showModal} onHide={handleCloseModal} className="modal-modern" size="lg">
+          <Modal.Header closeButton style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+            <Modal.Title className="text-white">
+              <i className={`bi bi-${editingId ? 'pencil' : 'plus-circle'} me-2`}></i>
+              {editingId ? 'Edit' : 'Tambah'} User
+            </Modal.Title>
           </Modal.Header>
-          <Form onSubmit={handleSubmit}>
+          <Form onSubmit={handleSubmit} className="form-modern">
             <Modal.Body>
-              {error && <Alert variant="danger">{error}</Alert>}
+              {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
               
-              <Form.Group className="mb-3">
-                <Form.Label>Nama Lengkap *</Form.Label>
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-semibold">
+                  <i className="bi bi-person-fill me-2"></i>
+                  Nama Lengkap *
+                </Form.Label>
                 <Form.Control
                   type="text"
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleChange}
                   required
+                  placeholder="Masukkan nama lengkap"
+                  size="lg"
                 />
               </Form.Group>
 
-              <Form.Group className="mb-3">
-                <Form.Label>Username *</Form.Label>
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-semibold">
+                  <i className="bi bi-person-circle me-2"></i>
+                  Username *
+                </Form.Label>
                 <Form.Control
                   type="text"
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
                   required
+                  placeholder="Masukkan username"
+                  size="lg"
                 />
               </Form.Group>
 
-              <Form.Group className="mb-3">
-                <Form.Label>Email *</Form.Label>
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-semibold">
+                  <i className="bi bi-envelope-fill me-2"></i>
+                  Email *
+                </Form.Label>
                 <Form.Control
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   required
+                  placeholder="Masukkan email"
+                  size="lg"
                 />
               </Form.Group>
 
-              <Form.Group className="mb-3">
-                <Form.Label>Password {editingId && '(kosongkan jika tidak ingin mengubah)'}</Form.Label>
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-semibold">
+                  <i className="bi bi-lock-fill me-2"></i>
+                  Password {editingId && '(kosongkan jika tidak ingin mengubah)'}
+                </Form.Label>
                 <Form.Control
                   type="password"
                   name="password"
@@ -239,20 +349,26 @@ const Users = () => {
                   onChange={handleChange}
                   required={!editingId}
                   minLength="6"
+                  placeholder="Masukkan password"
+                  size="lg"
                 />
               </Form.Group>
 
               <Form.Group className="mb-3">
-                <Form.Label>Role *</Form.Label>
+                <Form.Label className="fw-semibold">
+                  <i className="bi bi-shield-check me-2"></i>
+                  Role *
+                </Form.Label>
                 <Form.Select
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
                   required
+                  size="lg"
                 >
-                  <option value="user">User</option>
-                  <option value="petugas">Petugas</option>
-                  <option value="admin">Admin</option>
+                  <option value="user">👤 User</option>
+                  <option value="petugas">📋 Petugas</option>
+                  <option value="admin">🛡️ Admin</option>
                 </Form.Select>
               </Form.Group>
             </Modal.Body>
@@ -260,14 +376,17 @@ const Users = () => {
               <Button variant="secondary" onClick={handleCloseModal}>
                 Batal
               </Button>
-              <Button variant="primary" type="submit">
-                {editingId ? 'Update' : 'Simpan'}
+              <Button variant="primary" type="submit" className="btn-modern">
+                <i className={`bi bi-${editingId ? 'arrow-repeat' : 'check-circle'} me-2`}></i>
+                {editingId ? 'Update User' : 'Tambah User'}
               </Button>
             </Modal.Footer>
           </Form>
         </Modal>
-      </Container>
-    </>
+        </Container>
+      </div>
+      <Footer />
+    </div>
   );
 };
 

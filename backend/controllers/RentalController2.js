@@ -238,6 +238,25 @@ class RentalController {
       } else if (status === 'returned' && oldStatus === 'approved') {
         await connection.query('UPDATE instruments SET stock = stock + 1, is_available = 1 WHERE id = ?', [rental.instrument_id]);
         await connection.query('UPDATE rentals SET actual_return_date = NOW() WHERE id = ?', [id]);
+
+        // Calculate late fee automatically
+        const returnDate = new Date();
+        const endDate = new Date(rental.end_date);
+        const gracePeriod = 24 * 60 * 60 * 1000; // 24 hours grace period
+
+        let lateDays = 0;
+        let lateFeePerDay = 10000; // Default Rp 10,000 per day
+        let lateFeeTotal = 0;
+
+        if (returnDate > (endDate.getTime() + gracePeriod)) {
+          lateDays = Math.ceil((returnDate - endDate) / (1000 * 60 * 60 * 24));
+          lateFeeTotal = lateDays * lateFeePerDay;
+        }
+
+        await connection.query(
+          'UPDATE rentals SET late_fee_per_day = ?, late_days = ?, late_fee_total = ? WHERE id = ?',
+          [lateFeePerDay, lateDays, lateFeeTotal, id]
+        );
       } else if ((status === 'rejected' || status === 'cancelled') && oldStatus === 'approved') {
         await connection.query('UPDATE instruments SET stock = stock + 1, is_available = 1 WHERE id = ?', [rental.instrument_id]);
       }
