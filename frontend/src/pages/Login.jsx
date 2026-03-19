@@ -34,17 +34,22 @@ const Login = () => {
   };
 
   return (
-    <div 
-      className="d-flex align-items-center justify-content-center p-4"
-      style={{ 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        minHeight: '100vh'
-      }}
-    >
+    <div className="auth-page d-flex align-items-center justify-content-center p-4">
+      <div className="auth-bg">
+        <span className="music-note icon-1">♪</span>
+        <span className="music-note icon-2">♫</span>
+        <span className="music-note icon-3">♬</span>
+        <span className="music-note icon-4">🎸</span>
+        <span className="music-note icon-5">🎹</span>
+        <span className="music-note icon-6">🥁</span>
+        <span className="music-note icon-7">🎷</span>
+        <span className="music-note icon-8">🎺</span>
+      </div>
+      <div className="auth-content">
       <Container className="w-100" style={{ maxWidth: '450px' }}>
-        <div className="slide-in">
-          <Card className="border-0 shadow-lg" style={{ borderRadius: '24px' }}>
-            <Card.Body className="p-5">
+        <div className="slide-in auth-card-wrap">
+          <Card className="border-0 shadow-lg" style={{ borderRadius: '24px', background: 'linear-gradient(180deg, rgb(15, 17, 126) 0%, rgb(18, 26, 97) 100%)', border: '1px solid rgba(255,255,255,0.45)' }}>
+            <Card.Body className="p-4 p-md-5">
               {/* Header */}
               <div className="text-center mb-5">
                 <div 
@@ -189,6 +194,7 @@ const Login = () => {
           </Card>
         </div>
       </Container>
+      </div>
     </div>
   );
 };

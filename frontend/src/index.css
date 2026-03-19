@@ -549,6 +549,27 @@ h4, h5, h6 {
   color: #f8fafc;
 }
 
+.dark-theme .table-modern tbody tr {
+  border-color: #334155;
+}
+
+.dark-theme .table-modern tbody td,
+.dark-theme .table-modern tbody th,
+.dark-theme .table-modern thead th {
+  color: #e2e8f0;
+}
+
+.dark-theme .table {
+  color: #e2e8f0;
+  border-color: #334155;
+}
+
+.dark-theme .table > tbody > tr > td,
+.dark-theme .table > tbody > tr > th,
+.dark-theme .table > thead > tr > th {
+  border-top: 1px solid #2d3748;
+}
+
 .dark-theme .instrument-card {
   background: #111827;
   border-color: #1f2937;
@@ -622,9 +643,63 @@ h4, h5, h6 {
   color: #ffffff !important;
 }
 
-.dark-theme .card, .dark-theme .table, .dark-theme .modal-content {
+.dark-theme .card, .dark-theme .modal-content {
   background-color: #0b1228 !important;
   border-color: #1f2937 !important;
+  color: #e2e8f0 !important;
+}
+
+.dark-theme .table {
+  background-color: #0f172a !important;
+  color: #e2e8f0 !important;
+  border-color: #1f2937 !important;
+}
+
+.dark-theme .table th,
+.dark-theme .table td {
+  color: #e2e8f0 !important;
+  border-top: 1px solid #1f2937 !important;
+}
+
+.dark-theme .table thead th {
+  background-color: #111827 !important;
+  color: #f8fafc !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+.dark-theme .table tbody tr {
+  background-color: #0b1228 !important;
+}
+
+.dark-theme .table tbody tr:hover {
+  background-color: #1f2937 !important;
+}
+
+.dark-theme .table-responsive {
+  background-color: transparent !important;
+}
+
+.dark-theme .card h1, .dark-theme .card h2, .dark-theme .card h3, .dark-theme .card h4, .dark-theme .card h5, .dark-theme .card h6,
+.dark-theme .card p, .dark-theme .card label, .dark-theme .card small, .dark-theme .card div, .dark-theme .card span {
+  color: #f8fafc !important;
+}
+
+.dark-theme .dark-theme .form-label, .dark-theme .form-label {
+  color: #f8fafc !important;
+}
+
+.dark-theme .form-control, .dark-theme .form-select {
+  background: #111827 !important;
+  color: #f8fafc !important;
+}
+
+.dark-theme .form-control::placeholder {
+  color: #cbd5e1;
+}
+
+.dark-theme .btn-primary {
+  background: #4f46e5 !important;
+  border-color: #4f46e5 !important;
 }
 
 .dark-theme .badge {
@@ -683,6 +758,84 @@ h4, h5, h6 {
 /* Fade In Animation */
 .fade-in {
   animation: fadeIn 0.6s ease-in-out;
+}
+
+.auth-page {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  background: radial-gradient(circle at top right, #2a5fff 0%, #050d1f 35%, #05070f 100%);
+}
+
+.auth-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.music-note {
+  position: absolute;
+  font-size: 2.4rem;
+  opacity: 0.15;
+  animation: float 10s linear infinite;
+  color: #f8fafc;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+}
+
+.music-note.icon-1 { top: 12%; left: 8%; animation-duration: 10s; }
+.music-note.icon-2 { top: 22%; left: 70%; animation-duration: 14s; }
+.music-note.icon-3 { top: 45%; left: 18%; animation-duration: 11s; }
+.music-note.icon-4 { top: 78%; left: 65%; animation-duration: 16s; }
+.music-note.icon-5 { top: 88%; left: 33%; animation-duration: 13s; }
+.music-note.icon-6 { top: 52%; left: 53%; animation-duration: 18s; }
+.music-note.icon-7 { top: 30%; left: 42%; animation-duration: 15s; }
+.music-note.icon-8 { top: 65%; left: 15%; animation-duration: 17s; }
+
+@keyframes float {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0.15; }
+  50% { transform: translate(20px, -30px) rotate(20deg); opacity: 0.35; }
+  100% { transform: translate(-15px, 20px) rotate(-15deg); opacity: 0.15; }
+}
+
+.auth-content {
+  width: 100%;
+  z-index: 2;
+}
+
+.auth-card-wrap {
+  position: relative;
+  z-index: 3;
+}
+
+.auth-content .card {
+  backdrop-filter: blur(8px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+.auth-content .card-body {
+  background: rgba(255,255,255,0.87);
+}
+
+.dark-theme .auth-content .card-body {
+  background: rgba(15, 23, 42, 0.9) !important;
+  color: #f8fafc !important;
+}
+
+.dark-theme .auth-content .card-body * {
+  color: #f1f5f9 !important;
+}
+
+.dark-theme .auth-content .btn {
+  color: white !important;
+}
+
+.auth-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top center, rgba(255,255,255,0.08), transparent 40%), radial-gradient(circle at bottom right, rgba(255,255,255,0.04), transparent 42%);
+  pointer-events: none;
 }
 
 @keyframes fadeIn {
