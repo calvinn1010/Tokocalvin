@@ -1,12 +1,14 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Navbar, Nav, Container, NavDropdown, Badge } from 'react-bootstrap';
+import { Navbar, Nav, Container, NavDropdown, Badge, Button } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useTheme } from '../context/ThemeContext';
 
 const NavigationBar = () => {
   const { user, logout } = useAuth();
   const { cartItemsTotalQuantity } = useCart();
+  const { nightMode, setNightMode } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -58,6 +60,15 @@ const NavigationBar = () => {
             </Nav.Link>
           </Nav>
           <Nav>
+            <Button
+              variant={nightMode ? 'outline-light' : 'outline-dark'}
+              size="sm"
+              className="me-2"
+              onClick={() => setNightMode((prev) => !prev)}
+            >
+              <i className={`bi ${nightMode ? 'bi-sun-fill' : 'bi-moon-fill'} me-1`}></i>
+              {nightMode ? 'Day' : 'Night'}
+            </Button>
             <NavDropdown 
               title={
                 <span>

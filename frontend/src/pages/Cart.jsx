@@ -69,6 +69,12 @@ const Cart = () => {
       return;
     }
 
+    const unavailableItem = cartItems.find(item => item.stock <= 0 || item.is_available === 0 || item.is_available === false);
+    if (unavailableItem) {
+      setCheckoutError(`Alat musik ${unavailableItem.name} tidak tersedia. Periksa stok dan ketersediaan, lalu coba lagi.`);
+      return;
+    }
+
     setCheckoutLoading(true);
 
     try {
@@ -96,7 +102,8 @@ const Cart = () => {
 
     } catch (error) {
       console.error('[Checkout] Error:', error);
-      setCheckoutError(error.response?.data?.message || 'Gagal membuat peminjaman. ' + error.message);
+      const reason = error?.response?.data?.message || error?.message || 'Gagal membuat peminjaman';
+      setCheckoutError(reason);
     } finally {
       setCheckoutLoading(false);
     }

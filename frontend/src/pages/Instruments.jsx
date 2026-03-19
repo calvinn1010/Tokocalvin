@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, Button, Modal, Form, Alert, Badge, ButtonGro
 import NavigationBar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useTheme } from '../context/ThemeContext';
 import { getInstruments, createInstrument, updateInstrument, deleteInstrument, getCategories } from '../utils/api';
 import Footer from '../components/Footer';
 
@@ -29,6 +30,7 @@ const Instruments = () => {
     price_per_day: ''
   });
   const [imageFile, setImageFile] = useState(null);
+  const { nightMode, setNightMode } = useTheme();
 
   useEffect(() => {
     loadInstruments();
@@ -183,9 +185,17 @@ const Instruments = () => {
     return <Badge bg={conditionMap[condition] || 'secondary'} className="badge-modern">{condition}</Badge>;
   };
 
-  const getCategoryIcon = (categoryName) => {
-    const category = categories.find(c => c.name === categoryName);
-    return category ? category.icon : '🎵';
+  const getInstrumentIcon = (instrumentName) => {
+    const name = (instrumentName || '').toLowerCase();
+    if (name.includes('gitar') || name.includes('guitar')) return '🎸';
+    if (name.includes('drum')) return '🥁';
+    if (name.includes('biola') || name.includes('violin')) return '🎻';
+    if (name.includes('piano') || name.includes('keyboard')) return '🎹';
+    if (name.includes('sax') || name.includes('saksofon')) return '🎷';
+    if (name.includes('flute') || name.includes('seruling')) return '🎶';
+    if (name.includes('headphone') || name.includes('headphones')) return '🎧';
+    if (name.includes('speaker') || name.includes('monitor') || name.includes('subwoofer')) return '🔊';
+    return '🎵';
   };
 
   const getCategoryColor = (categoryName) => {
@@ -201,41 +211,55 @@ const Instruments = () => {
       <NavigationBar />
       <div style={{ flex: 1 }}>
         <Container fluid className="px-4 fade-in">
-        <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3 p-4 rounded-4" style={{ background: 'linear-gradient(135deg, #2a2d6f 0%, #423f84 100%)', color: 'white' }}>
           <div>
-            <h1 className="display-6 fw-bold mb-2">🎸 Katalog Alat Musik</h1>
-            <p className="text-muted mb-0">Temukan alat musik favoritmu</p>
+            <div className="mb-2">
+              <span className="badge bg-light text-dark fw-bold" style={{ borderRadius: '999px', padding: '0.35rem 0.9rem' }}>NEW</span>
+            </div>
+            <h1 className="display-6 fw-bold" style={{ letterSpacing: '-0.5px' }}>🎸 Katalog Alat Musik Profesional</h1>
+            <p className="mb-0" style={{ opacity: 0.9 }}>Sewa instrumen berkualitas dan peralatan studio lengkap untuk setiap musisi.</p>
           </div>
-          {canEdit && (
-            <Button
-              variant="primary"
-              onClick={() => handleShowModal()}
-              className="btn-modern shadow"
-              size="lg"
-            >
-              <i className="bi bi-plus-circle me-2"></i>
-              Tambah Alat
+          <div className="d-flex gap-2 align-items-center">
+            <Button variant="outline-light" className="btn-modern fw-semibold" onClick={() => setNightMode(prev => !prev)}>
+              <i className={`bi ${nightMode ? 'bi-sun-fill' : 'bi-moon-fill'} me-1`} />
+              {nightMode ? 'Day' : 'Night'}
             </Button>
-          )}
+            <Button variant="light" className="btn-modern fw-semibold" onClick={() => setViewMode('grid')} style={{ color: '#2b3a67' }}>
+              <i className="bi bi-grid-3x3-gap me-1"></i> Grid
+            </Button>
+            <Button variant="outline-light" className="btn-modern fw-semibold" onClick={() => setViewMode('table')}>
+              <i className="bi bi-list-ul me-1"></i> Tabel
+            </Button>
+            {canEdit && (
+              <Button
+                variant="warning"
+                onClick={() => handleShowModal()}
+                className="btn-modern fw-semibold"
+              >
+                <i className="bi bi-plus-circle me-1"></i>
+                Tambah Alat
+              </Button>
+            )}
+          </div>
         </div>
 
         {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
         {success && <Alert variant="success" dismissible onClose={() => setSuccess('')}>{success}</Alert>}
         {addToCartSuccess && <Alert variant="info" dismissible onClose={() => setAddToCartSuccess('')}><i className="bi bi-check-circle me-2"></i>{addToCartSuccess}</Alert>}
 
-        <Card className="border-0 shadow-sm mb-4">
+        <Card className="border-0 shadow-sm mb-4 card-gradient">
           <Card.Body>
             <Row className="align-items-center g-3">
-              <Col md={6}>
+              <Col md={5}>
                 <div className="position-relative">
-                  <i className="bi bi-search position-absolute top-50 translate-middle-y ms-3"></i>
+                  <i className="bi bi-search position-absolute top-50 translate-middle-y ms-3 text-secondary"></i>
                   <Form.Control
                     type="text"
                     placeholder="Cari alat musik..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="ps-5"
-                    style={{ borderRadius: '12px' }}
+                    style={{ borderRadius: '14px', background: '#f7f8ff', borderColor: '#dde4ff', height: '45px' }}
                   />
                 </div>
               </Col>
@@ -243,7 +267,7 @@ const Instruments = () => {
                 <Form.Select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  style={{ borderRadius: '12px' }}
+                  style={{ borderRadius: '14px', background: '#f7f8ff', borderColor: '#dde4ff', height: '45px', fontWeight: 600 }}
                 >
                   <option value="all">🎵 Semua Kategori</option>
                   {categories.map(cat => (
@@ -324,8 +348,8 @@ const Instruments = () => {
                         justifyContent: 'center'
                       }}
                     >
-                      <div style={{ fontSize: '4rem' }}>
-                        {getCategoryIcon(instrument.category)}
+                      <div style={{ fontSize: '3.8rem', lineHeight: 1 }}>
+                        {getInstrumentIcon(instrument.name)}
                       </div>
                     </div>
                     <Card.Body>
@@ -337,6 +361,10 @@ const Instruments = () => {
                           {instrument.category}
                         </Badge>
                         {getStockBadge(instrument.stock)}
+                      </div>
+                      <div className="d-flex gap-2 flex-wrap mb-2">
+                        <Badge bg="info" className="badge-modern">{instrument.condition}</Badge>
+                        <Badge bg="secondary" className="badge-modern">Stock: {instrument.stock}</Badge>
                       </div>
                       <h5 className="fw-bold mb-2">{instrument.name}</h5>
                       <p className="text-muted small mb-3" style={{ minHeight: '40px' }}>
@@ -366,7 +394,7 @@ const Instruments = () => {
                             variant="info"
                             size="sm"
                             onClick={() => handleAddToCart(instrument)}
-                            disabled={instrument.stock === 0}
+                            disabled={instrument.stock === 0 || instrument.is_available === 0 || instrument.is_available === false}
                             className="btn-modern"
                           >
                             <i className="bi bi-cart-plus me-2"></i>Tambah ke Keranjang
@@ -428,8 +456,8 @@ const Instruments = () => {
                       <tr key={instrument.id}>
                         <td>
                           <div className="d-flex align-items-center">
-                            <div className="me-3" style={{ fontSize: '2rem' }}>
-                              {getCategoryIcon(instrument.category)}
+                            <div className="me-3" style={{ width: '52px', height: '52px', borderRadius: '8px', backgroundColor: '#f5f5f5', display: 'grid', placeItems: 'center', fontSize: '1.7rem' }}>
+                              {getInstrumentIcon(instrument.name)}
                             </div>
                             <div>
                               <div className="fw-bold">{instrument.name}</div>
