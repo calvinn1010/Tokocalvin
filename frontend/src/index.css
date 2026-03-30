@@ -556,7 +556,7 @@ h4, h5, h6 {
 .dark-theme .table-modern tbody td,
 .dark-theme .table-modern tbody th,
 .dark-theme .table-modern thead th {
-  color: #e2e8f0;
+  color: #f8fafc;
 }
 
 .dark-theme .table {
@@ -679,9 +679,32 @@ h4, h5, h6 {
   background-color: transparent !important;
 }
 
-.dark-theme .card h1, .dark-theme .card h2, .dark-theme .card h3, .dark-theme .card h4, .dark-theme .card h5, .dark-theme .card h6,
-.dark-theme .card p, .dark-theme .card label, .dark-theme .card small, .dark-theme .card div, .dark-theme .card span {
-  color: #f8fafc !important;
+.dark-theme .table-modern thead,
+.dark-theme .table thead {
+  background: #1f2937 !important; /* Background gelap untuk header */
+  color: #f8fafc !important;      /* Teks putih terang */
+}
+
+.dark-theme .table-modern tbody td,
+.dark-theme .table-modern tbody th,
+.dark-theme .table tbody td,
+.dark-theme .table tbody th {
+  color: #f8fafc !important; /* Teks putih terang untuk isi tabel */
+  background: #0b1228 !important; /* Background gelap untuk baris */
+}
+
+.dark-theme .table-modern tbody tr:hover,
+.dark-theme .table tbody tr:hover {
+  background: #94a3b8 !important; /* Background hover gelap */
+  opacity: 1;
+}
+
+/* Jika ada teks muted di tabel, gunakan warna abu-abu terang */
+.dark-theme .text-muted,
+.dark-theme .table .text-muted,
+.dark-theme .table-modern .text-muted {
+  color: #ffffff !important;
+  opacity: 1 !important;
 }
 
 .dark-theme .dark-theme .form-label, .dark-theme .form-label {
