@@ -247,14 +247,16 @@ const Dashboard = () => {
                       <i className="bi bi-music-note-list me-2"></i>
                       Lihat Alat Musik
                     </Link>
-                    <Link to="/rentals" className="btn btn-outline-success btn-modern">
-                      <i className="bi bi-plus-circle me-2"></i>
-                      Peminjaman
-                    </Link>
+                    {user.role === 'user' && (
+                      <Link to="/rentals" className="btn btn-outline-success btn-modern">
+                        <i className="bi bi-plus-circle me-2"></i>
+                        Peminjaman
+                      </Link>
+                    )}
                     {(user.role === 'admin' || user.role === 'petugas') && (
                       <Link to="/rentals" className="btn btn-outline-warning btn-modern">
                         <i className="bi bi-check2-square me-2"></i>
-                        Review Peminjaman ({stats.pendingRentals})
+                        Persetujuan Peminjaman ({stats.pendingRentals})
                       </Link>
                     )}
                   </div>

@@ -182,9 +182,9 @@ class RentalController {
       let snapToken = null;
       if (paymentMethod === 'transfer') {
         let snap = new midtransClient.Snap({
-          isProduction: false,
-          serverKey: process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-1234dummy',
-          clientKey: process.env.MIDTRANS_CLIENT_KEY || 'SB-Mid-client-1234dummy'
+          isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
+          serverKey: process.env.MIDTRANS_SERVER_KEY,
+          clientKey: process.env.MIDTRANS_CLIENT_KEY
         });
 
         const parameter = {
@@ -282,13 +282,13 @@ class RentalController {
       let snapToken = null;
       if (paymentMethod === 'transfer') {
         console.log('--- MIDTRANS DEBUG ---');
-        console.log('Mode: SANDBOX');
-        console.log('Server Key:', 'SB-Mid-server-TOq1a2AVuiyhhOjvfs33_m3w');
+        console.log('Mode:', process.env.MIDTRANS_IS_PRODUCTION === 'true' ? 'PRODUCTION' : 'SANDBOX');
+        console.log('Server Key:', process.env.MIDTRANS_SERVER_KEY);
 
         let snap = new midtransClient.Snap({
-          isProduction: false,
-          serverKey: 'SB-Mid-server-TOq1a2AVuiyhhOjvfs33_m3w',
-          clientKey: 'SB-Mid-client-WNbvJ_iA8P4oR40V'
+          isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
+          serverKey: process.env.MIDTRANS_SERVER_KEY,
+          clientKey: process.env.MIDTRANS_CLIENT_KEY
         });
 
         const transaction = await snap.createTransaction({

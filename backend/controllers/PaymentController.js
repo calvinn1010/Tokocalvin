@@ -4,9 +4,9 @@ const midtransClient = require('midtrans-client');
 class PaymentController {
   static async handleNotification(req, res) {
     let apiClient = new midtransClient.Snap({
-      isProduction: false,
-      serverKey: 'SB-Mid-server-TOq1a2AVuiyhhOjvfs33_m3w',
-      clientKey: 'SB-Mid-client-WNbvJ_iA8P4oR40V'
+      isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
+      serverKey: process.env.MIDTRANS_SERVER_KEY,
+      clientKey: process.env.MIDTRANS_CLIENT_KEY
     });
 
     try {
