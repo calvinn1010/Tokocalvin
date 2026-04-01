@@ -1,4 +1,5 @@
 const { pool } = require('../database/db');
+const midtransClient = require('midtrans-client');
 
 class RentalController {
   static async getAllRentals(req, res) {
@@ -178,10 +179,39 @@ class RentalController {
         [result.insertId]
       );
 
+      let snapToken = null;
+      if (paymentMethod === 'transfer') {
+        let snap = new midtransClient.Snap({
+          isProduction: false,
+          serverKey: process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-1234dummy',
+          clientKey: process.env.MIDTRANS_CLIENT_KEY || 'SB-Mid-client-1234dummy'
+        });
+
+        const parameter = {
+            "transaction_details": {
+                "order_id": `Rental-${result.insertId}-${Date.now()}`,
+                "gross_amount": totalPrice
+            },
+            "credit_card":{
+                "secure" : true
+            },
+            "customer_details": {
+                "first_name": req.user.full_name,
+                "email": req.user.email
+            }
+        };
+
+        const transaction = await snap.createTransaction(parameter);
+        snapToken = transaction.token;
+      }
+
       res.status(201).json({
         success: true,
         message: 'Pengajuan peminjaman berhasil dibuat',
-        data: createdRentals[0]
+        data: {
+          ...createdRentals[0],
+          snap_token: snapToken
+        }
       });
 
     } catch (error) {
@@ -189,6 +219,116 @@ class RentalController {
       connection.release();
       console.error('Error:', error);
       res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  static async createBulkRentals(req, res) {
+    if (req.user.role !== 'user') {
+      return res.status(403).json({ success: false, message: 'Hanya peminjam (user) yang dapat mengajukan peminjaman' });
+    }
+
+    const connection = await pool.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      const { rentals, paymentMethod = 'cash' } = req.body;
+      
+      if (!Array.isArray(rentals) || rentals.length === 0) {
+        throw new Error('Data peminjaman kosong');
+      }
+
+      // Fetch user details to provide to Midtrans (JWT only contains id/role)
+      const [users] = await connection.query('SELECT full_name, email FROM users WHERE id = ?', [req.user.id]);
+      const user = users[0] || {};
+
+      let totalGrossAmount = 0;
+      const createdIds = [];
+      const orderId = paymentMethod === 'transfer' ? `B-${Date.now()}` : null;
+      const methodToSave = paymentMethod === 'transfer' ? `transfer-${orderId}` : paymentMethod;
+
+      for (const rental of rentals) {
+        const instId = parseInt(rental.instrumentId);
+        const start = new Date(rental.startDate);
+        const end = new Date(rental.endDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (start < today || end <= start) {
+          throw new Error('Tanggal peminjaman tidak valid');
+        }
+
+        const [instruments] = await connection.query('SELECT * FROM instruments WHERE id = ?', [instId]);
+        if (instruments.length === 0 || !instruments[0].is_available || instruments[0].stock <= 0) {
+          throw new Error('Alat musik tidak tersedia');
+        }
+
+        const instrument = instruments[0];
+        const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        const totalPrice = totalDays * parseFloat(instrument.price_per_day);
+        
+        totalGrossAmount += totalPrice;
+
+        const [result] = await connection.query(
+          `INSERT INTO rentals 
+           (user_id, instrument_id, start_date, end_date, status, notes, total_days, total_price, 
+            payment_method, payment_status, payment_amount)
+           VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, 'pending', ?)`,
+          [req.user.id, instId, start, end, rental.notes, totalDays, totalPrice, methodToSave, totalPrice]
+        );
+        createdIds.push(result.insertId);
+      }
+
+      let snapToken = null;
+      if (paymentMethod === 'transfer') {
+        console.log('--- MIDTRANS DEBUG ---');
+        console.log('Mode: SANDBOX');
+        console.log('Server Key:', 'SB-Mid-server-TOq1a2AVuiyhhOjvfs33_m3w');
+
+        let snap = new midtransClient.Snap({
+          isProduction: false,
+          serverKey: 'SB-Mid-server-TOq1a2AVuiyhhOjvfs33_m3w',
+          clientKey: 'SB-Mid-client-WNbvJ_iA8P4oR40V'
+        });
+
+        const transaction = await snap.createTransaction({
+            "transaction_details": {
+                "order_id": orderId,
+                "gross_amount": Math.round(totalGrossAmount)
+            },
+            "credit_card":{ "secure" : true },
+            "customer_details": {
+                "first_name": user.full_name || 'Customer',
+                "email": user.email || ''
+            }
+        });
+        snapToken = transaction.token;
+      }
+
+      await connection.commit();
+      connection.release();
+
+      res.status(201).json({
+        success: true,
+        message: 'Pengajuan bulk peminjaman berhasil',
+        data: { snap_token: snapToken, order_id: orderId }
+      });
+
+    } catch (error) {
+      if (connection) {
+        await connection.rollback();
+        connection.release();
+      }
+      // Log the full error to the backend console for debugging!
+      console.error('[Checkout Error Details]:', error);
+      if (error.ApiResponse) {
+        console.error('[Midtrans API Error]:', error.ApiResponse);
+      }
+      res.status(400).json({ 
+        success: false, 
+        message: error.message,
+        details: error.ApiResponse // Send back to frontend if available
+      });
     }
   }
 

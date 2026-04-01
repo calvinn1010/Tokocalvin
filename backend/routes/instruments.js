@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 const { pool } = require('../database/db');
 const { auth } = require('../middleware/auth');
 const checkRole = require('../middleware/checkRole');
@@ -55,8 +57,8 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// Create instrument (Admin & Petugas)
-router.post('/', auth, checkRole('admin', 'petugas'), upload.single('image'), async (req, res) => {
+// Create instrument (Admin Only)
+router.post('/', auth, checkRole('admin'), upload.single('image'), async (req, res) => {
   try {
     const { name, category_id, condition, stock, description, price_per_day, brand } = req.body;
 
@@ -89,8 +91,8 @@ router.post('/', auth, checkRole('admin', 'petugas'), upload.single('image'), as
   }
 });
 
-// Update instrument (Admin & Petugas)
-router.put('/:id', auth, checkRole('admin', 'petugas'), upload.single('image'), async (req, res) => {
+// Update instrument (Admin Only)
+router.put('/:id', auth, checkRole('admin'), upload.single('image'), async (req, res) => {
   try {
     const { name, category_id, condition, stock, description, price_per_day, brand } = req.body;
     const id = req.params.id;
@@ -132,9 +134,70 @@ router.put('/:id', auth, checkRole('admin', 'petugas'), upload.single('image'), 
   }
 });
 
-// Delete instrument (Admin & Petugas)
-router.delete('/:id', auth, checkRole('admin', 'petugas'), async (req, res) => {
+// Delete instrument image (Admin Only)
+router.delete('/:id/image', auth, checkRole('admin'), async (req, res) => {
   try {
+    const { id } = req.params;
+    console.log(`[DELETE IMAGE] Attempting to delete image for instrument ID: ${id}`);
+    
+    const [rows] = await pool.query('SELECT name, image FROM instruments WHERE id = ?', [id]);
+    console.log(`[DELETE IMAGE] Query result:`, rows);
+    
+    if (rows.length === 0) {
+      console.warn(`[DELETE IMAGE] No instrument found with ID: ${id}`);
+      return res.status(404).json({ success: false, message: 'Alat musik tidak ditemukan' });
+    }
+
+    if (rows[0].image) {
+      try {
+        const filePath = path.join(__dirname, '..', rows[0].image);
+        console.log(`[DELETE IMAGE] Attempting to delete file: ${filePath}`);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log(`[DELETE IMAGE] Successfully deleted file: ${filePath}`);
+        } else {
+          console.warn(`[DELETE IMAGE] File not found: ${filePath}`);
+        }
+      } catch (err) {
+        console.error(`[DELETE IMAGE] Error deleting file:`, err);
+        // Continue with DB update even if file deletion fails
+      }
+    }
+
+    await pool.query('UPDATE instruments SET image = NULL WHERE id = ?', [req.params.id]);
+
+    res.json({ success: true, message: 'Gambar berhasil dihapus' });
+  } catch (error) {
+    console.error('[DELETE IMAGE ERROR]:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Gagal menghapus gambar dari server', 
+      error: error.message 
+    });
+  }
+});
+
+// Delete instrument (Admin Only)
+router.delete('/:id', auth, checkRole('admin'), async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT image FROM instruments WHERE id = ?', [req.params.id]);
+    
+    if (rows.length > 0 && rows[0].image) {
+      try {
+        const filePath = path.join(__dirname, '..', rows[0].image);
+        console.log(`[DELETE INSTRUMENT] Attempting to delete file: ${filePath}`);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log(`[DELETE INSTRUMENT] Successfully deleted file: ${filePath}`);
+        } else {
+          console.warn(`[DELETE INSTRUMENT] File not found: ${filePath}`);
+        }
+      } catch (err) {
+        console.error(`[DELETE INSTRUMENT] Error deleting file:`, err);
+        // Continue with instrument deletion even if file deletion fails
+      }
+    }
+
     const [result] = await pool.query('DELETE FROM instruments WHERE id = ?', [req.params.id]);
 
     if (result.affectedRows === 0) {

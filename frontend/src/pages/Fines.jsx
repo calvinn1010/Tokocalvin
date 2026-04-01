@@ -176,7 +176,7 @@ const Fines = () => {
                 <div className="d-flex justify-content-between align-items-start">
                   <div>
                     <p className="mb-1 opacity-75">Total Nominal</p>
-                    <h4 className="fw-bold mb-0">Rp {((stats.total_amount || 0) / 1000000).toFixed(1)}J</h4>
+                    <h4 className="fw-bold mb-0">Rp {(stats.total_amount || 0).toLocaleString('id-ID')}</h4>
                   </div>
                   <div className="bg-white bg-opacity-25 rounded-circle p-3">
                     <i className="bi bi-cash-coin fs-3"></i>
@@ -346,6 +346,14 @@ const Fines = () => {
                     ))
                   )}
                 </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan="5" className="text-end fw-bold">Total Nilai Denda:</td>
+                    <td colSpan="3" className="fw-bold text-danger">
+                      Rp {fines.reduce((sum, fine) => sum + parseInt(fine.late_fee_total || 0), 0).toLocaleString('id-ID')}
+                    </td>
+                  </tr>
+                </tfoot>
               </Table>
             </div>
           </Card.Body>

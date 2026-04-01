@@ -14,6 +14,7 @@ import Rentals from './pages/Rentals';
 import Users from './pages/Users';
 import Fines from './pages/Fines';
 import Cart from './pages/Cart';
+import Reports from './pages/Reports';
 
 // Bootstrap CSS
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -75,8 +76,21 @@ function App() {
           />
           
           <Route
+            path="/reports"
+            element={
+              <ProtectedRoute roles={['admin', 'petugas']}>
+                <Reports />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
             path="/cart"
-            element={<Cart />}
+            element={
+              <ProtectedRoute roles={['user']}>
+                <Cart />
+              </ProtectedRoute>
+            }
           />
           
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

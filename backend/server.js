@@ -10,6 +10,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request Logger
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
 // Buat folder uploads jika belum ada
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -26,6 +32,7 @@ app.use('/api/instruments', require('./routes/instruments'));
 app.use('/api/rentals', require('./routes/rentals'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/fines', require('./routes/fines'));
+app.use('/api/payment', require('./routes/payment'));
 
 // Log all requests for debugging 404s
 app.use((req, res, next) => {
@@ -75,7 +82,7 @@ const startServer = async () => {
     
     app.listen(PORT, () => {
       console.log(`Server berjalan di port ${PORT}`);
-      console.log(`Mode: ${process.env.NODE_ENV}`);
+      console.log(`Mode: ${process.env.NODE_ENV || 'development'}`);
       console.log('\nDefault Users:');
       console.log('Admin - username: admin, password: admin123');
       console.log('Petugas - username: petugas, password: petugas123');

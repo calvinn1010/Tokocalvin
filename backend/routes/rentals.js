@@ -13,6 +13,9 @@ router.get('/:id', auth, RentalController.getRentalById);
 // Create new rental (only for users)
 router.post('/', auth, RentalController.createRental);
 
+// Create bulk rentals
+router.post('/bulk', auth, RentalController.createBulkRentals);
+
 // Update rental status (admin/petugas only)
 router.put('/:id/status', auth, checkRole('admin', 'petugas'), RentalController.updateRentalStatus);
 

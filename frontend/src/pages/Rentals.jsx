@@ -9,18 +9,8 @@ const Rentals = () => {
   const { user } = useAuth();
   const [rentals, setRentals] = useState([]);
   const [instruments, setInstruments] = useState([]);
-  const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [formData, setFormData] = useState({
-    instrumentId: '',
-    startDate: '',
-    endDate: '',
-    notes: '',
-    paymentMethod: 'cash',
-    paymentAmount: 0,
-    paymentReceipt: ''
-  });
 
   useEffect(() => {
     loadRentals();
@@ -69,62 +59,6 @@ const Rentals = () => {
     }
   };
 
-  const handleShowModal = () => {
-    setFormData({
-      instrumentId: '',
-      startDate: '',
-      endDate: '',
-      notes: '',
-      paymentMethod: 'cash',
-      paymentAmount: 0,
-      paymentReceipt: ''
-    });
-    setShowModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setError('');
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    const newFormData = { ...formData, [name]: value };
-
-    if ((name === 'instrumentId' || name === 'startDate' || name === 'endDate') && newFormData.instrumentId && newFormData.startDate && newFormData.endDate) {
-      const selectedInstrument = instruments.find(i => i.id === parseInt(newFormData.instrumentId));
-      if (selectedInstrument) {
-        const start = new Date(newFormData.startDate);
-        const end = new Date(newFormData.endDate);
-
-        if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start) {
-          const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-          const price = selectedInstrument.price_per_day || selectedInstrument.price || 0;
-          const amount = days * price;
-          newFormData.paymentAmount = parseFloat(amount.toFixed(2));
-        } else {
-          newFormData.paymentAmount = 0;
-        }
-      }
-    }
-
-    setFormData(newFormData);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    try {
-      await createRental(formData);
-      setSuccess('Pengajuan peminjaman berhasil dibuat');
-      handleCloseModal();
-      loadRentals();
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Terjadi kesalahan');
-    }
-  };
 
   const handleUpdateStatus = async (id, status) => {
     try {
@@ -192,17 +126,6 @@ const Rentals = () => {
               {canApprove ? 'Kelola dan persetujui peminjaman alat musik' : 'Kelola peminjaman alat musik Anda'}
             </p>
           </div>
-          {user.role === 'user' && (
-            <Button 
-              variant="primary" 
-              onClick={handleShowModal}
-              className="btn-modern shadow"
-              size="lg"
-            >
-              <i className="bi bi-plus-circle me-2"></i>
-              Ajukan Peminjaman
-            </Button>
-          )}
         </div>
 
         {error && <Alert variant="danger" dismissible onClose={() => setError('')} className="mb-4">{error}</Alert>}
@@ -289,12 +212,8 @@ const Rentals = () => {
                     <th>Peminjam</th>
                     <th>Alat Musik</th>
                     <th>Periode</th>
-                    {user.role === 'user' && (
-                      <>
                         <th>Biaya</th>
                         <th>Pembayaran</th>
-                      </>
-                    )}
                     <th>Status</th>
                     <th className="text-center">Aksi</th>
                   </tr>
@@ -302,7 +221,7 @@ const Rentals = () => {
                 <tbody>
                   {rentals.length === 0 ? (
                     <tr>
-                      <td colSpan={user.role === 'user' ? '7' : '5'} className="text-center py-5">
+                      <td colSpan="7" className="text-center py-5">
                         <div style={{ fontSize: '3rem', opacity: 0.3 }}>📋</div>
                         <p className="text-muted mb-0 mt-2">Tidak ada data peminjaman</p>
                       </td>
@@ -333,8 +252,6 @@ const Rentals = () => {
                             <small className="text-muted">Selesai: {formatDate(rental.endDate)}</small>
                           </div>
                         </td>
-                        {user.role === 'user' && (
-                          <>
                             <td>
                               {rental.totalPrice ? (
                                 <div>
@@ -346,17 +263,19 @@ const Rentals = () => {
                             <td>
                               {rental.paymentStatus ? (
                                 <div>
-                                  <Badge bg={rental.paymentStatus === 'completed' ? 'success' : rental.paymentStatus === 'pending' ? 'warning' : 'danger'} className="badge-modern">
+                                  <Badge bg={rental.paymentStatus === 'completed' ? 'success' : rental.paymentStatus === 'pending' ? 'warning' : 'danger'} className="badge-modern mb-1">
                                     <i className={`bi bi-${rental.paymentStatus === 'completed' ? 'check-circle' : rental.paymentStatus === 'pending' ? 'clock' : 'x-circle'} me-1`}></i>
                                     {rental.paymentStatus === 'completed' ? 'Terbayar' : rental.paymentStatus === 'pending' ? 'Menunggu' : 'Gagal'}
                                   </Badge>
+                                  <br/>
+                                  <small className="text-muted">
+                                    {rental.paymentMethod && rental.paymentMethod.startsWith('transfer') ? 'Transfer (Midtrans)' : 'Tunai'}
+                                  </small>
                                 </div>
                               ) : (
                                 <span>-</span>
                               )}
                             </td>
-                          </>
-                        )}
                         <td>{getStatusBadge(rental.status)}</td>
                         <td className="text-center">
                           {canApprove && rental.status === 'pending' && (
@@ -412,164 +331,6 @@ const Rentals = () => {
           </Card.Body>
         </Card>
 
-        <Modal show={showModal} onHide={handleCloseModal} className="modal-modern" size="lg">
-          <Modal.Header closeButton style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-            <Modal.Title className="text-white">
-              <i className="bi bi-plus-circle me-2"></i>
-              Ajukan Peminjaman Baru
-            </Modal.Title>
-          </Modal.Header>
-          <Form onSubmit={handleSubmit} className="form-modern">
-            <Modal.Body>
-              {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
-
-              <Form.Group className="mb-4">
-                <Form.Label className="fw-semibold">
-                  <i className="bi bi-music-note-list me-2"></i>
-                  Alat Musik *
-                </Form.Label>
-                <Form.Select
-                  name="instrumentId"
-                  value={formData.instrumentId}
-                  onChange={handleChange}
-                  required
-                  size="lg"
-                >
-                  <option value="">Pilih alat musik...</option>
-                  {instruments.map((instrument) => (
-                    <option key={instrument.id} value={instrument.id}>
-                      {instrument.name} - {instrument.category} (Stok: {instrument.stock})
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-
-              <Row>
-                <Col md={6}>
-                  <Form.Group className="mb-4">
-                    <Form.Label className="fw-semibold">
-                      <i className="bi bi-calendar-event me-2"></i>
-                      Tanggal Mulai *
-                    </Form.Label>
-                    <Form.Control
-                      type="date"
-                      name="startDate"
-                      value={formData.startDate}
-                      onChange={handleChange}
-                      required
-                      min={new Date().toISOString().split('T')[0]}
-                      size="lg"
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-4">
-                    <Form.Label className="fw-semibold">
-                      <i className="bi bi-calendar-check me-2"></i>
-                      Tanggal Selesai *
-                    </Form.Label>
-                    <Form.Control
-                      type="date"
-                      name="endDate"
-                      value={formData.endDate}
-                      onChange={handleChange}
-                      required
-                      min={formData.startDate || new Date().toISOString().split('T')[0]}
-                      size="lg"
-                    />
-                  </Form.Group>
-                </Col>
-              </Row>
-
-              <Form.Group className="mb-4">
-                <Form.Label className="fw-semibold">
-                  <i className="bi bi-list-check me-2"></i>
-                  Catatan
-                </Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={2}
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  placeholder="Keperluan peminjaman..."
-                />
-              </Form.Group>
-
-              <hr className="my-4" />
-              <h6 className="mb-4 fw-bold">
-                <i className="bi bi-credit-card me-2"></i>
-                Informasi Pembayaran
-              </h6>
-
-              <Row>
-                <Col md={6}>
-                  <Form.Group className="mb-4">
-                    <Form.Label className="fw-semibold">
-                      <i className="bi bi-wallet2 me-2"></i>
-                      Metode Pembayaran *
-                    </Form.Label>
-                    <Form.Select
-                      name="paymentMethod"
-                      value={formData.paymentMethod}
-                      onChange={handleChange}
-                      required
-                      size="lg"
-                    >
-                      <option value="cash">💵 Tunai (Cash)</option>
-                    </Form.Select>
-                    <Form.Text className="text-muted">
-                      Pembayaran dilakukan saat pengambilan
-                    </Form.Text>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-4">
-                    <Form.Label className="fw-semibold">
-                      <i className="bi bi-cash-coin me-2"></i>
-                      Jumlah Pembayaran *
-                    </Form.Label>
-                    <Form.Control
-                      type="number"
-                      name="paymentAmount"
-                      value={formData.paymentAmount}
-                      onChange={handleChange}
-                      className="fw-bold"
-                      required
-                      step="0.01"
-                      min="0"
-                      size="lg"
-                    />
-                  </Form.Group>
-                </Col>
-              </Row>
-
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">
-                  <i className="bi bi-file-text me-2"></i>
-                  Catatan Pembayaran
-                </Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={2}
-                  name="paymentReceipt"
-                  value={formData.paymentReceipt}
-                  onChange={handleChange}
-                  placeholder="Contoh: Sudah siapkan uang cash..."
-                />
-              </Form.Group>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={handleCloseModal}>
-                Batal
-              </Button>
-              <Button variant="primary" type="submit" className="btn-modern">
-                <i className="bi bi-check-circle me-2"></i>
-                Ajukan Peminjaman
-              </Button>
-            </Modal.Footer>
-          </Form>
-        </Modal>
         </Container>
       </div>
       <Footer />

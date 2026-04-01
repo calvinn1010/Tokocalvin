@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Modal, Form, Alert, Badge, ButtonGroup } from 'react-bootstrap';
+import React, { useState, useEffect, useRef } from 'react';
+import { Container, Row, Col, Card, Button, Modal, Form, Alert, Badge, ButtonGroup, Toast, ToastContainer } from 'react-bootstrap';
 import NavigationBar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -27,10 +27,12 @@ const Instruments = () => {
     condition: 'Baik',
     stock: '',
     description: '',
-    price_per_day: ''
+    price_per_day: '',
+    image: null
   });
   const [imageFile, setImageFile] = useState(null);
   const { nightMode, setNightMode } = useTheme();
+  const sliderRef = useRef(null);
 
   useEffect(() => {
     loadInstruments();
@@ -85,7 +87,8 @@ const Instruments = () => {
         condition: instrument.condition,
         stock: instrument.stock,
         description: instrument.description || '',
-        price_per_day: instrument.price_per_day || ''
+        price_per_day: instrument.price_per_day || '',
+        image: instrument.image || null
       });
     } else {
       setEditingId(null);
@@ -95,7 +98,8 @@ const Instruments = () => {
         condition: 'Baik',
         stock: '',
         description: '',
-        price_per_day: ''
+        price_per_day: '',
+        image: null
       });
     }
     setImageFile(null);
@@ -160,11 +164,80 @@ const Instruments = () => {
     }
   };
 
-  const handleAddToCart = (instrument) => {
-    addToCart(instrument);
-    setAddToCartSuccess(`${instrument.name} ditambahkan ke keranjang!`);
-    setTimeout(() => setAddToCartSuccess(''), 3000);
+  const handleDeleteImage = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    if (!editingId) {
+      setError('ID alat musik tidak ditemukan');
+      return;
+    }
+
+    if (window.confirm('Apakah Anda yakin ingin menghapus gambar alat musik ini?')) {
+      try {
+        await deleteInstrumentImage(editingId);
+        setSuccess('Gambar berhasil dihapus');
+        setFormData({ ...formData, image: null });
+        loadInstruments();
+        setTimeout(() => setSuccess(''), 3000);
+      } catch (err) {
+        console.error('Delete image error:', err);
+        const msg = err.response?.data?.message || err.message || 'Gagal menghapus gambar';
+        setError(msg);
+      }
+    }
   };
+
+  const handleAddToCart = (instrument) => {
+    const success = addToCart(instrument);
+    if (success) {
+      setAddToCartSuccess(`${instrument.name} ditambahkan ke keranjang!`);
+      setTimeout(() => setAddToCartSuccess(''), 3000);
+    }
+  };
+
+  const scrollSlider = (direction) => {
+    if (sliderRef.current) {
+      const { scrollLeft, clientWidth } = sliderRef.current;
+      const scrollAmount = clientWidth * 0.8;
+      const scrollTo = direction === 'left' 
+        ? scrollLeft - scrollAmount
+        : scrollLeft + scrollAmount;
+      
+      sliderRef.current.scrollTo({
+        left: scrollTo,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const handleScroll = () => {
+    if (!sliderRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = sliderRef.current;
+    
+    // Jump to middle if we reach the ends of the tripled list
+    const oneThird = scrollWidth / 3;
+    
+    if (scrollLeft < 10) {
+      sliderRef.current.scrollLeft = oneThird;
+    } else if (scrollLeft + clientWidth > scrollWidth - 10) {
+      sliderRef.current.scrollLeft = oneThird - clientWidth;
+    }
+  };
+
+  useEffect(() => {
+    if (categories.length > 0 && sliderRef.current) {
+      // Initialize scroll to middle third
+      const timer = setTimeout(() => {
+        if (sliderRef.current) {
+          sliderRef.current.scrollLeft = sliderRef.current.scrollWidth / 3;
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [categories]);
 
   const getStockBadge = (stock) => {
     if (stock === 0) {
@@ -203,7 +276,7 @@ const Instruments = () => {
     return category ? category.color : '#6c757d';
   };
 
-  const canEdit = user.role === 'admin' || user.role === 'petugas';
+  const canEdit = user.role === 'admin';
   const isUser = user.role === 'user';
 
   return (
@@ -245,7 +318,29 @@ const Instruments = () => {
 
         {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
         {success && <Alert variant="success" dismissible onClose={() => setSuccess('')}>{success}</Alert>}
-        {addToCartSuccess && <Alert variant="info" dismissible onClose={() => setAddToCartSuccess('')}><i className="bi bi-check-circle me-2"></i>{addToCartSuccess}</Alert>}
+        
+        <ToastContainer position="top-end" className="p-3" style={{ zIndex: 9999 }}>
+          <Toast 
+            show={!!addToCartSuccess} 
+            onClose={() => setAddToCartSuccess('')} 
+            delay={3000} 
+            autohide
+            className="border-0 shadow-lg"
+            style={{ 
+              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+              color: 'white',
+              borderRadius: '12px'
+            }}
+          >
+            <Toast.Header closeButton={true} className="border-0 bg-transparent text-white">
+              <i className="bi bi-cart-check-fill me-2"></i>
+              <strong className="me-auto">Berhasil</strong>
+            </Toast.Header>
+            <Toast.Body className="fw-medium">
+              {addToCartSuccess}
+            </Toast.Body>
+          </Toast>
+        </ToastContainer>
 
         <Card className="border-0 shadow-sm mb-4 card-gradient">
           <Card.Body>
@@ -297,30 +392,75 @@ const Instruments = () => {
           </Card.Body>
         </Card>
 
-        <div className="mb-5">
-          <h5 className="fw-bold mb-3">Kategori Populer</h5>
-          <Row className="g-3">
-            {categories.slice(0, 4).map(category => {
-              const count = instruments.filter(i => i.category === category.name).length;
-              return (
-                <Col key={category.id} md={3} sm={6}>
-                  <Card
-                    className="category-card border-0 shadow-sm h-100"
-                    style={{
-                      background: `linear-gradient(135deg, ${category.color}20 0%, ${category.color}40 100%)`
-                    }}
-                    onClick={() => setSelectedCategory(category.name)}
-                  >
-                    <Card.Body className="text-center py-4">
-                      <div style={{ fontSize: '3rem' }}>{category.icon}</div>
-                      <h6 className="fw-bold mt-2 mb-1">{category.name}</h6>
-                      <small className="text-muted">{count} Alat</small>
-                    </Card.Body>
-                  </Card>
-                </Col>
-              );
-            })}
-          </Row>
+        <div className="mb-5 position-relative">
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <h5 className="fw-bold m-0"><i className="bi bi-stars text-warning me-2"></i>Jelajahi Kategori</h5>
+            <div className="d-flex gap-2">
+              <Button 
+                variant="light" 
+                className="rounded-circle shadow-sm p-0 d-none d-md-flex" 
+                style={{ width: '40px', height: '40px', alignItems: 'center', justifyContent: 'center' }}
+                onClick={() => scrollSlider('left')}
+              >
+                <i className="bi bi-chevron-left"></i>
+              </Button>
+              <Button 
+                variant="light" 
+                className="rounded-circle shadow-sm p-0 d-none d-md-flex" 
+                style={{ width: '40px', height: '40px', alignItems: 'center', justifyContent: 'center' }}
+                onClick={() => scrollSlider('right')}
+              >
+                <i className="bi bi-chevron-right"></i>
+              </Button>
+            </div>
+          </div>
+
+          <div className="category-slider-wrapper">
+            <div className="category-slider-container" ref={sliderRef} onScroll={handleScroll}>
+              {[...categories, ...categories, ...categories].map((category, index) => {
+                const count = instruments.filter(i => i.category === category.name).length;
+                const isSelected = selectedCategory === category.name;
+                return (
+                  <div key={`${category.id}-${index}`} className="category-slider-item">
+                    <Card
+                      className={`category-card border-0 shadow-sm h-100 ${isSelected ? 'ring-2 ring-primary bg-white' : ''}`}
+                      style={{
+                        background: isSelected 
+                          ? 'white' 
+                          : `linear-gradient(135deg, ${category.color}15 0%, ${category.color}25 100%)`,
+                        border: isSelected ? `2px solid ${category.color}` : '2px solid transparent',
+                        transition: 'all 0.3s ease'
+                      }}
+                      onClick={() => setSelectedCategory(category.name === selectedCategory ? 'all' : category.name)}
+                    >
+                      <Card.Body className="text-center py-4 d-flex flex-column align-items-center justify-content-center">
+                        <div 
+                          className="mb-3 d-flex align-items-center justify-content-center rounded-circle" 
+                          style={{ 
+                            width: '80px', 
+                            height: '80px', 
+                            fontSize: '2.5rem',
+                            background: `linear-gradient(135deg, ${category.color}20 0%, ${category.color}40 100%)`,
+                            boxShadow: `0 10px 20px ${category.color}20`
+                          }}
+                        >
+                          {category.icon}
+                        </div>
+                        <h6 className="fw-bold mb-1" style={{ color: isSelected ? '#1a1a1a' : 'inherit' }}>{category.name}</h6>
+                        <Badge 
+                          bg="white" 
+                          className="text-dark border shadow-sm" 
+                          style={{ fontSize: '0.7rem', fontWeight: 700 }}
+                        >
+                          {count} Instrumen
+                        </Badge>
+                      </Card.Body>
+                    </Card>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {viewMode === 'grid' ? (
@@ -348,9 +488,22 @@ const Instruments = () => {
                         justifyContent: 'center'
                       }}
                     >
-                      <div style={{ fontSize: '3.8rem', lineHeight: 1 }}>
-                        {getInstrumentIcon(instrument.name)}
-                      </div>
+                      {instrument.image ? (
+                        <img 
+                          src={`http://localhost:5000${instrument.image}`} 
+                          alt={instrument.name}
+                          style={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover',
+                            borderRadius: '12px'
+                          }}
+                        />
+                      ) : (
+                        <div style={{ fontSize: '3.8rem', lineHeight: 1 }}>
+                          {getInstrumentIcon(instrument.name)}
+                        </div>
+                      )}
                     </div>
                     <Card.Body>
                       <div className="d-flex justify-content-between align-items-start mb-2">
@@ -456,8 +609,16 @@ const Instruments = () => {
                       <tr key={instrument.id}>
                         <td>
                           <div className="d-flex align-items-center">
-                            <div className="me-3" style={{ width: '52px', height: '52px', borderRadius: '8px', backgroundColor: '#f5f5f5', display: 'grid', placeItems: 'center', fontSize: '1.7rem' }}>
-                              {getInstrumentIcon(instrument.name)}
+                            <div className="me-3" style={{ width: '52px', height: '52px', borderRadius: '8px', backgroundColor: '#f5f5f5', display: 'grid', placeItems: 'center', fontSize: '1.7rem', overflow: 'hidden' }}>
+                              {instrument.image ? (
+                                <img 
+                                  src={`http://localhost:5000${instrument.image}`} 
+                                  alt={instrument.name}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                              ) : (
+                                getInstrumentIcon(instrument.name)
+                              )}
                             </div>
                             <div>
                               <div className="fw-bold">{instrument.name}</div>
@@ -625,13 +786,42 @@ const Instruments = () => {
                 />
               </Form.Group>
 
-              <Form.Group>
+               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold">Gambar</Form.Label>
+                {formData.image ? (
+                  <div className="mb-3 position-relative" style={{ width: '120px' }}>
+                    <img 
+                      src={`http://localhost:5000${formData.image}`} 
+                      alt="Preview" 
+                      style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #dee2e6' }} 
+                    />
+                    <Button 
+                      type="button"
+                      variant="danger" 
+                      size="sm" 
+                      className="position-absolute top-0 end-0 m-1 shadow-sm"
+                      style={{ padding: '0.1rem 0.3rem', borderRadius: '50%', zIndex: 5 }}
+                      onClick={(e) => handleDeleteImage(e)}
+                      title="Hapus Gambar"
+                    >
+                      <i className="bi bi-x"></i>
+                    </Button>
+                    <div className="mt-1 small text-muted text-center fw-medium">Gambar Aktif</div>
+                  </div>
+                ) : (
+                  <div className="mb-3 d-flex flex-column align-items-center justify-content-center border rounded-3 bg-light" style={{ width: '120px', height: '120px' }}>
+                    <div style={{ fontSize: '3rem' }}>{getInstrumentIcon(formData.name)}</div>
+                    <div className="mt-1 small text-muted fw-medium text-center">Ikon Default</div>
+                  </div>
+                )}
                 <Form.Control
                   type="file"
                   accept="image/*"
                   onChange={handleFileChange}
                 />
+                <Form.Text className="text-muted">
+                  Format: JPG, PNG, WEBP. Maks 2MB.
+                </Form.Text>
               </Form.Group>
             </Modal.Body>
             <Modal.Footer>

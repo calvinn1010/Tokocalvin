@@ -5,11 +5,13 @@ import NavigationBar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { createBulkRentals } from '../utils/api';
 
 const Cart = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { nightMode } = useTheme();
   const { cartItems, cartTotal, removeFromCart, updateQuantity, clearCart } = useCart();
   const isUser = user?.role === 'user';
   
@@ -78,27 +80,65 @@ const Cart = () => {
     setCheckoutLoading(true);
 
     try {
-      // Create rental data for each cart item
-      const rentalsToCreate = cartItems.map(item => ({
-        instrumentId: item.id,
-        startDate: checkoutData.startDate,
-        endDate: checkoutData.endDate,
-        notes: checkoutData.notes,
-        paymentMethod: checkoutData.paymentMethod
-      }));
+      // Create rental data for each cart item based on quantity
+      const rentalsToCreate = [];
+      cartItems.forEach(item => {
+        for (let i = 0; i < item.quantity; i++) {
+          rentalsToCreate.push({
+            instrumentId: item.id,
+            startDate: checkoutData.startDate,
+            endDate: checkoutData.endDate,
+            notes: checkoutData.notes,
+            paymentMethod: checkoutData.paymentMethod
+          });
+        }
+      });
 
       // Submit all rentals
       const response = await createBulkRentals(rentalsToCreate);
       
       console.log('[Checkout] Success:', response);
-      setCheckoutSuccess('✓ Semua peminjaman berhasil dibuat!');
-      
-      // Clear cart after successful checkout
-      setTimeout(() => {
-        clearCart();
-        setShowCheckoutModal(false);
-        navigate('/rentals');
-      }, 1500);
+
+      const snapToken = response?.data?.snap_token;
+      if (snapToken && window.snap) {
+        window.snap.pay(snapToken, {
+          onSuccess: function(result) {
+            setCheckoutSuccess('✓ Pembayaran berhasil!');
+            setTimeout(() => {
+              clearCart();
+              setShowCheckoutModal(false);
+              navigate('/rentals');
+            }, 1500);
+          },
+          onPending: function(result) {
+            setCheckoutSuccess('✓ Menunggu pembayaran...');
+            setTimeout(() => {
+              clearCart();
+              setShowCheckoutModal(false);
+              navigate('/rentals');
+            }, 1500);
+          },
+          onError: function(result) {
+            setCheckoutError('❌ Pembayaran gagal.');
+          },
+          onClose: function() {
+            setCheckoutError('❌ Anda menutup popup tanpa menyelesaikan pembayaran.');
+            // Still redirect to rentals or keep in cart? Usually keep in rentls but since it's created, we must redirect.
+            setTimeout(() => {
+              clearCart();
+              setShowCheckoutModal(false);
+              navigate('/rentals');
+            }, 1500);
+          }
+        });
+      } else {
+        setCheckoutSuccess('✓ Peminjaman tunai berhasil dibuat! Silakan tunggu verifikasi admin.');
+        setTimeout(() => {
+          clearCart();
+          setShowCheckoutModal(false);
+          navigate('/rentals');
+        }, 1500);
+      }
 
     } catch (error) {
       console.error('[Checkout] Error:', error);
@@ -166,8 +206,8 @@ const Cart = () => {
                             <th>Alat Musik</th>
                             <th>Kategori</th>
                             <th>Harga/Hari</th>
-                            <th>Jumlah Hari</th>
-                            <th>Subtotal</th>
+                            <th>Jumlah Barang</th>
+                            <th>Subtotal/Hari</th>
                             <th className="text-center">Aksi</th>
                           </tr>
                         </thead>
@@ -205,9 +245,11 @@ const Cart = () => {
                                     style={{
                                       width: '45px',
                                       textAlign: 'center',
-                                      border: '1px solid #ccc',
+                                      border: `1px solid ${nightMode ? '#334155' : '#ccc'}`,
                                       borderRadius: '4px',
                                       padding: '4px',
+                                      background: nightMode ? '#0f172a' : 'white',
+                                      color: nightMode ? '#f8fafc' : 'black',
                                       opacity: isUser ? 1 : 0.6,
                                       cursor: isUser ? 'auto' : 'not-allowed'
                                     }}
@@ -275,12 +317,12 @@ const Cart = () => {
                         <strong>{cartItems.length} item</strong>
                       </div>
                       <div className="d-flex justify-content-between mb-2">
-                        <span>Total Hari:</span>
-                        <strong>{cartItems.reduce((sum, item) => sum + item.quantity, 0)} hari</strong>
+                        <span>Jumlah Barang:</span>
+                        <strong>{cartItems.reduce((sum, item) => sum + item.quantity, 0)} barang</strong>
                       </div>
                       <hr />
                       <div className="d-flex justify-content-between mb-3">
-                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Total:</span>
+                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Total Harga/Hari:</span>
                         <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#667eea' }}>
                           Rp {cartTotal.toLocaleString('id-ID')}
                         </div>
@@ -362,13 +404,13 @@ const Cart = () => {
                     <span>
                       <strong>{item.name}</strong>
                       <br />
-                      <small className="text-muted">{item.quantity} hari × Rp {(item.price_per_day || 0).toLocaleString('id-ID')}</small>
+                      <small className="text-muted">{item.quantity} barang × Rp {(item.price_per_day || 0).toLocaleString('id-ID')}/hari</small>
                     </span>
-                    <span className="fw-bold text-primary">Rp {(item.price_per_day * item.quantity).toLocaleString('id-ID')}</span>
+                    <span className="fw-bold text-primary">Rp {(item.price_per_day * item.quantity).toLocaleString('id-ID')}/hari</span>
                   </div>
                 ))}
                 <div className="d-flex justify-content-between mt-2 pt-2 border-top">
-                  <span className="fw-bold">Total Biaya:</span>
+                  <span className="fw-bold">Total Harga/Hari:</span>
                   <span className="fw-bold text-success" style={{ fontSize: '1.1rem' }}>Rp {cartTotal.toLocaleString('id-ID')}</span>
                 </div>
               </div>
@@ -406,9 +448,8 @@ const Cart = () => {
                     onChange={handleCheckoutChange}
                     disabled={checkoutLoading}
                   >
-                    <option value="cash">Tunai</option>
-                    <option value="transfer">Transfer Bank</option>
-                    <option value="card">Kartu Kredit</option>
+                    <option value="cash">Tunai (Verifikasi Petugas)</option>
+                    <option value="transfer">Transfer Bank (Midtrans)</option>
                   </Form.Select>
                 </Form.Group>
 

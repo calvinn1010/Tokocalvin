@@ -44,24 +44,20 @@ export const updateInstrument = (id, formData) => api.put(`/instruments/${id}`, 
   headers: { 'Content-Type': 'multipart/form-data' }
 });
 export const deleteInstrument = (id) => api.delete(`/instruments/${id}`);
+export const deleteInstrumentImage = (id) => api.delete(`/instruments/${id}/image`);
 
 // Rental functions
 export const getRentals = () => api.get('/rentals');
 export const getRental = (id) => api.get(`/rentals/${id}`);
 export const createRental = (rentalData) => api.post('/rentals', rentalData);
 export const createBulkRentals = async (rentalsData) => {
-  const results = await Promise.allSettled(rentalsData.map((rentalData) => createRental(rentalData)));
-  const failed = results.find((r) => r.status === 'rejected');
-  if (failed) {
-    const reason = failed.reason;
-    if (reason?.response?.data?.message) {
-      const error = new Error(reason.response.data.message);
-      error.response = reason.response;
-      throw error;
-    }
-    throw reason;
-  }
-  return results.filter((r) => r.status === 'fulfilled').map((r) => r.value);
+  // rentalsData is an array of rental objects which share same paymentMethod
+  const paymentMethod = rentalsData.length > 0 ? rentalsData[0].paymentMethod : 'cash';
+  const response = await api.post('/rentals/bulk', {
+    rentals: rentalsData,
+    paymentMethod: paymentMethod
+  });
+  return response.data;
 };
 export const updateRentalStatus = (id, status) => api.put(`/rentals/${id}/status`, { status });
 export const deleteRental = (id) => api.delete(`/rentals/${id}`);

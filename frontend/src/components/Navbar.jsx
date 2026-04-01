@@ -38,9 +38,14 @@ const NavigationBar = () => {
               <i className="bi bi-calendar-check me-2"></i>Peminjaman
             </Nav.Link>
             {(user.role === 'admin' || user.role === 'petugas') && (
-              <Nav.Link as={Link} to="/fines" className="mx-2 fw-medium">
-                <i className="bi bi-cash me-2"></i>Denda
-              </Nav.Link>
+              <>
+                <Nav.Link as={Link} to="/fines" className="mx-2 fw-medium">
+                  <i className="bi bi-cash me-2"></i>Denda
+                </Nav.Link>
+                <Nav.Link as={Link} to="/reports" className="mx-2 fw-medium">
+                  <i className="bi bi-file-earmark-bar-graph me-2"></i>Laporan
+                </Nav.Link>
+              </>
             )}
             {user.role === 'admin' && (
               <Nav.Link as={Link} to="/users" className="mx-2 fw-medium">
@@ -49,15 +54,17 @@ const NavigationBar = () => {
             )}
           </Nav>
           <Nav className="ms-auto">
-            <Nav.Link as={Link} to="/cart" className="mx-2 fw-medium position-relative" style={{ marginRight: '20px' }}>
-              <i className="bi bi-cart-fill me-2" style={{ fontSize: '1.3rem' }}></i>
-              Keranjang
-              {cartItemsTotalQuantity > 0 && (
-                <Badge bg="danger" className="position-absolute" style={{ top: '-5px', right: '5px', padding: '4px 8px', fontSize: '0.8rem' }}>
-                  {cartItemsTotalQuantity}
-                </Badge>
-              )}
-            </Nav.Link>
+            {user?.role === 'user' && (
+              <Nav.Link as={Link} to="/cart" className="mx-2 fw-medium position-relative" style={{ marginRight: '20px' }}>
+                <i className="bi bi-cart-fill me-2" style={{ fontSize: '1.3rem' }}></i>
+                Keranjang
+                {cartItemsTotalQuantity > 0 && (
+                  <Badge bg="danger" className="position-absolute" style={{ top: '-5px', right: '5px', padding: '4px 8px', fontSize: '0.8rem' }}>
+                    {cartItemsTotalQuantity}
+                  </Badge>
+                )}
+              </Nav.Link>
+            )}
           </Nav>
           <Nav>
             <Button

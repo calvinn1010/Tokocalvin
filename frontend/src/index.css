@@ -601,6 +601,11 @@ h4, h5, h6 {
   border-color: #334155 !important;
 }
 
+.dark-theme .bg-light {
+  background-color: #1f2937 !important;
+  color: #f8fafc !important;
+}
+
 .dark-theme .form-control,
 .dark-theme .form-select {
   background: #0f172a !important;
@@ -643,10 +648,32 @@ h4, h5, h6 {
   color: #ffffff !important;
 }
 
-.dark-theme .card, .dark-theme .modal-content {
+.dark-theme .card, .dark-theme .modal-content, .dark-theme .dropdown-menu {
   background-color: #0b1228 !important;
   border-color: #1f2937 !important;
   color: #e2e8f0 !important;
+}
+
+.dark-theme .dropdown-item {
+  color: #e2e8f0 !important;
+}
+
+.dark-theme .dropdown-item:hover, .dark-theme .dropdown-item:focus {
+  background-color: #1f2937 !important;
+  color: #ffffff !important;
+}
+
+.dark-theme .dropdown-divider {
+  border-top-color: #1f2937 !important;
+}
+
+.dark-theme .dropdown-item.text-danger {
+  color: #ef4444 !important;
+}
+
+.dark-theme .dropdown-item.text-danger:hover, .dark-theme .dropdown-item.text-danger:focus {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
 }
 
 .dark-theme .table {
@@ -691,6 +718,12 @@ h4, h5, h6 {
 .dark-theme .table tbody th {
   color: #f8fafc !important; /* Teks putih terang untuk isi tabel */
   background: #0b1228 !important; /* Background gelap untuk baris */
+}
+
+.dark-theme .table tfoot td,
+.dark-theme .table tfoot th {
+  color: #f8fafc !important;
+  background: #111827 !important; /* Background gelap untuk footer (sama seperti header) */
 }
 
 .dark-theme .table-modern tbody tr:hover,
@@ -914,4 +947,161 @@ h4, h5, h6 {
 
 .bounce {
   animation: bounce 2s infinite;
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+@media print {
+  /* Sembunyikan semua elemen selain konten utama cetak */
+  body {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Sembunyikan class bawaan d-print-none secara eksplisit jika bootstrap tidak terbaca */
+  .d-print-none, .navbar, .btn, footer {
+    display: none !important;
+  }
+
+  /* Atur container utama untuk mengisi seluruh halaman cetak */
+  .container-fluid {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .report-table-card {
+    border: none !important;
+    box-shadow: none !important;
+    margin-top: 10px;
+  }
+
+  .table-modern.print-header {
+    background-color: transparent !important;
+  }
+
+  .table-modern.print-header th {
+    color: black !important;
+    background-color: #f8f9fa !important; /* Warna abu abu terang untuk membedakan header */
+    -webkit-print-color-adjust: exact !important; 
+    border-bottom: 2px solid #333 !important;
+  }
+
+  .table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  .table th, .table td {
+    border: 1px solid #dee2e6 !important;
+    padding: 8px !important;
+    color: black !important;
+  }
+
+  .badge-modern {
+    border: 1px solid #666 !important;
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}
+
+/* ============================================
+   CATEGORY SLIDER
+   ============================================ */
+.category-slider-wrapper {
+  position: relative;
+  margin: 0 -15px;
+  padding: 20px 0 40px 0;
+}
+
+.category-slider-container {
+  display: flex;
+  overflow-x: auto;
+  scroll-behavior: auto; /* Changed from smooth to handle instant jumps for infinite scrolling */
+  scroll-snap-type: x mandatory;
+  padding: 30px 15px 30px 15px;
+  gap: 20px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
+}
+
+.category-slider-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+.category-slider-item {
+  flex: 0 0 auto;
+  width: 280px;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.category-slider-item:hover {
+  transform: translateY(-15px) scale(1.05);
+  z-index: 5;
+}
+
+.slider-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #4f46e5;
+  font-size: 1.2rem;
+}
+
+.slider-nav-btn:hover {
+  background: white;
+  color: #6366f1;
+  box-shadow: 0 12px 40px rgba(31, 38, 135, 0.25);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.slider-nav-btn.prev {
+  left: -20px;
+}
+
+.slider-nav-btn.next {
+  right: -20px;
+}
+
+.dark-theme .slider-nav-btn {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+
+.dark-theme .slider-nav-btn:hover {
+  background: rgba(30, 41, 59, 0.9);
+  color: #818cf8;
+}
+
+@media (max-width: 768px) {
+  .category-slider-item {
+    width: 240px;
+  }
+  .slider-nav-btn {
+    display: none; /* Swiping handles it on mobile */
+  }
+  .category-slider-container {
+    padding: 10px 20px 20px 20px;
+  }
 }

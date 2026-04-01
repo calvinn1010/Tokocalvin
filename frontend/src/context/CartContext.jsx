@@ -51,11 +51,17 @@ export const CartProvider = ({ children }) => {
   }, [cartItems]);
 
   const addToCart = (instrument) => {
+    let success = false;
     setCartItems((prevItems) => {
       const existingItem = prevItems.find(item => item.id === instrument.id);
       
       if (existingItem) {
-        // Jika item sudah ada, tambah quantity
+        // Jika item sudah ada, cek stok sebelum menambah quantity
+        if (existingItem.quantity >= instrument.stock) {
+          alert(`Maksimal stok untuk ${instrument.name} adalah ${instrument.stock}`);
+          return prevItems;
+        }
+        success = true;
         return prevItems.map(item =>
           item.id === instrument.id
             ? { ...item, quantity: item.quantity + 1 }
@@ -63,9 +69,14 @@ export const CartProvider = ({ children }) => {
         );
       } else {
         // Tambah item baru ke cart
-        return [...prevItems, { ...instrument, quantity: 1 }];
+        if (instrument.stock > 0) {
+          success = true;
+          return [...prevItems, { ...instrument, quantity: 1 }];
+        }
+        return prevItems;
       }
     });
+    return success;
   };
 
   const removeFromCart = (instrumentId) => {
@@ -81,11 +92,17 @@ export const CartProvider = ({ children }) => {
     }
     
     setCartItems((prevItems) =>
-      prevItems.map(item =>
-        item.id === instrumentId
-          ? { ...item, quantity }
-          : item
-      )
+      prevItems.map(item => {
+        if (item.id === instrumentId) {
+          // Validasi tidak melebihi stok
+          const validQuantity = Math.min(quantity, item.stock);
+          if (quantity > item.stock) {
+            alert(`Maksimal stok tercapai (${item.stock})`);
+          }
+          return { ...item, quantity: validQuantity };
+        }
+        return item;
+      })
     );
   };
 

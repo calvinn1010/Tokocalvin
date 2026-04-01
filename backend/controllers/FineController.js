@@ -48,11 +48,17 @@ class FineController {
   // Get fine settings (harga denda per hari)
   static async getFineSettings(req, res) {
     try {
-      // For now, return default settings. In future, this could be stored in database
+      const [rows] = await pool.query('SELECT `key`, `value` FROM settings WHERE `key` IN ("late_fee_per_day", "grace_period_hours")');
+      
       const settings = {
-        late_fee_per_day: 10000, // Rp 10,000 per hari keterlambatan
-        grace_period_hours: 24 // Grace period 24 jam
+        late_fee_per_day: 10000,
+        grace_period_hours: 24
       };
+
+      rows.forEach(row => {
+        if (row.key === 'late_fee_per_day') settings.late_fee_per_day = parseFloat(row.value);
+        if (row.key === 'grace_period_hours') settings.grace_period_hours = parseInt(row.value);
+      });
 
       res.json({ success: true, data: settings });
 
@@ -64,17 +70,29 @@ class FineController {
 
   // Update fine settings (admin only)
   static async updateFineSettings(req, res) {
+    const connection = await pool.getConnection();
     try {
+      await connection.beginTransaction();
       const { late_fee_per_day, grace_period_hours } = req.body;
 
       if (late_fee_per_day < 0 || grace_period_hours < 0) {
+        await connection.rollback();
         return res.status(400).json({ success: false, message: 'Nilai tidak boleh negatif' });
       }
 
-      // For now, just return success. In future, store in database
+      if (late_fee_per_day !== undefined) {
+        await connection.query('UPDATE settings SET \`value\` = ? WHERE \`key\` = ?', [late_fee_per_day.toString(), 'late_fee_per_day']);
+      }
+      
+      if (grace_period_hours !== undefined) {
+        await connection.query('UPDATE settings SET \`value\` = ? WHERE \`key\` = ?', [grace_period_hours.toString(), 'grace_period_hours']);
+      }
+
+      await connection.commit();
+
       const settings = {
-        late_fee_per_day: parseFloat(late_fee_per_day) || 10000,
-        grace_period_hours: parseInt(grace_period_hours) || 24
+        late_fee_per_day: parseFloat(late_fee_per_day),
+        grace_period_hours: parseInt(grace_period_hours)
       };
 
       res.json({
@@ -84,8 +102,11 @@ class FineController {
       });
 
     } catch (error) {
+      await connection.rollback();
       console.error('Error:', error);
       res.status(500).json({ success: false, message: error.message });
+    } finally {
+      connection.release();
     }
   }
 
@@ -97,7 +118,13 @@ class FineController {
       await connection.beginTransaction();
 
       const { id } = req.params;
-      const { late_fee_per_day = 10000 } = req.body;
+      let { late_fee_per_day } = req.body;
+
+      // If late_fee_per_day is not provided, fetch from settings
+      if (late_fee_per_day === undefined || late_fee_per_day === null) {
+        const [settings] = await connection.query('SELECT `value` FROM settings WHERE `key` = "late_fee_per_day"');
+        late_fee_per_day = settings.length > 0 ? parseFloat(settings[0].value) : 10000;
+      }
 
       const [rentals] = await connection.query('SELECT * FROM rentals WHERE id = ?', [id]);
 
