@@ -20,6 +20,25 @@ api.interceptors.request.use(
   }
 );
 
+// Response interceptor untuk menangani error globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Jika token tidak valid atau expired (401)
+    if (error.response && error.response.status === 401) {
+      console.warn('Session expired or unauthorized. Redirecting to login...');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // Gunakan window.location untuk redirect (alternatif redirect di non-component)
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login?expired=true';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
 
 // Auth functions

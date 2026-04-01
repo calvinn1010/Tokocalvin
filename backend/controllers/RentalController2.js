@@ -376,12 +376,23 @@ class RentalController {
           [req.user.id, 'completed', id]
         );
       } else if (status === 'returned' && oldStatus === 'approved') {
+        const returnDate = new Date();
+        const endDate = new Date(rental.end_date);
+        
+        // Reset hours for accurate date comparison
+        const d1 = new Date(returnDate);
+        d1.setHours(0, 0, 0, 0);
+        const d2 = new Date(endDate);
+        d2.setHours(0, 0, 0, 0);
+
+        if (d1 < d2) {
+          throw new Error(`Alat musik belum bisa dikembalikan. Pengembalian wajib dilakukan pada atau setelah tanggal selesai (${endDate.toLocaleDateString('id-ID')}).`);
+        }
+
         await connection.query('UPDATE instruments SET stock = stock + 1, is_available = 1 WHERE id = ?', [rental.instrument_id]);
         await connection.query('UPDATE rentals SET actual_return_date = NOW() WHERE id = ?', [id]);
 
         // Calculate late fee automatically
-        const returnDate = new Date();
-        const endDate = new Date(rental.end_date);
         const gracePeriod = 24 * 60 * 60 * 1000; // 24 hours grace period
 
         let lateDays = 0;

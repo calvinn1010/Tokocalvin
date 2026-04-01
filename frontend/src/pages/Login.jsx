@@ -10,6 +10,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const location = new URLSearchParams(window.location.search);
+  const isExpired = location.get('expired') === 'true';
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -68,6 +70,13 @@ const Login = () => {
               </div>
 
               {/* Error Alert */}
+              {isExpired && !error && (
+                <Alert variant="warning" className="mb-4 shadow-sm" style={{ borderRadius: '12px' }}>
+                  <i className="bi bi-clock-history me-2"></i>
+                  Sesi Anda telah berakhir. Silakan login kembali.
+                </Alert>
+              )}
+
               {error && (
                 <Alert 
                   variant="danger" 
