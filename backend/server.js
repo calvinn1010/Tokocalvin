@@ -33,6 +33,7 @@ app.use('/api/rentals', require('./routes/rentals'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/fines', require('./routes/fines'));
 app.use('/api/payment', require('./routes/payment'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // Log all requests for debugging 404s
 app.use((req, res, next) => {

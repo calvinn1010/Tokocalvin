@@ -15,6 +15,8 @@ import Users from './pages/Users';
 import Fines from './pages/Fines';
 import Cart from './pages/Cart';
 import Reports from './pages/Reports';
+import DamagedInstruments from './pages/DamagedInstruments';
+import Profile from './pages/Profile';
 
 // Bootstrap CSS
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -85,6 +87,15 @@ function App() {
           />
           
           <Route
+            path="/damaged-items"
+            element={
+              <ProtectedRoute roles={['admin', 'petugas']}>
+                <DamagedInstruments />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
             path="/cart"
             element={
               <ProtectedRoute roles={['user']}>
@@ -93,6 +104,15 @@ function App() {
             }
           />
           
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

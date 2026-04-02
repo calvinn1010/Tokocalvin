@@ -12,6 +12,7 @@ class RentalController {
           r.status, r.notes, r.total_days, r.total_price, r.approved_by,
           r.approved_at, r.actual_return_date, r.rejection_reason,
           r.payment_method, r.payment_status, r.payment_amount, r.payment_date,
+          r.return_condition AS return_condition, r.damage_notes AS damage_notes,
           r.created_at, r.updated_at,
           u.username, u.full_name, u.email, u.phone,
           i.name as instrument_name, i.brand, i.price_per_day, i.stock,
@@ -38,6 +39,15 @@ class RentalController {
       if (status) {
         query += ' AND r.status = ?';
         params.push(status);
+      }
+
+      if (req.query.returnCondition) {
+        query += ' AND r.return_condition = ?';
+        params.push(req.query.returnCondition);
+      }
+      
+      if (req.query.isDamaged === 'true') {
+        query += " AND r.return_condition IN ('Cukup', 'Rusak')";
       }
 
       query += ' ORDER BY r.created_at DESC';
@@ -339,7 +349,14 @@ class RentalController {
       await connection.beginTransaction();
 
       const { id } = req.params;
-      const { status, rejectionReason } = req.body;
+      const body = req.body;
+      const { status, rejectionReason } = body;
+      
+      // Support both camelCase and snake_case
+      const returnCondition = body.returnCondition || body.return_condition || 'Baik';
+      const damageNotes = body.damageNotes || body.damage_notes || null;
+
+      console.log(`[StatusUpdate] ID: ${id}, Status: ${status}, Condition: ${returnCondition}`);
 
       if (!['pending', 'approved', 'rejected', 'returned', 'cancelled'].includes(status)) {
         await connection.rollback();
@@ -379,28 +396,50 @@ class RentalController {
         const returnDate = new Date();
         const endDate = new Date(rental.end_date);
         
-        // Reset hours for accurate date comparison
+        // Reset hours for accurate date comparison in local timezone
         const d1 = new Date(returnDate);
         d1.setHours(0, 0, 0, 0);
         const d2 = new Date(endDate);
         d2.setHours(0, 0, 0, 0);
 
+        console.log(`[RentalReturn] ID: ${id}, Today: ${d1.toISOString()}, EndDate: ${d2.toISOString()}`);
+
         if (d1 < d2) {
-          throw new Error(`Alat musik belum bisa dikembalikan. Pengembalian wajib dilakukan pada atau setelah tanggal selesai (${endDate.toLocaleDateString('id-ID')}).`);
+          await connection.rollback();
+          connection.release();
+          return res.status(400).json({ 
+            success: false, 
+            message: `Alat musik belum bisa dikembalikan secara sistem. Pengembalian wajib dilakukan pada atau setelah tanggal selesai (${endDate.toLocaleDateString('id-ID')}).` 
+          });
         }
 
-        await connection.query('UPDATE instruments SET stock = stock + 1, is_available = 1 WHERE id = ?', [rental.instrument_id]);
+        await connection.query(
+          'UPDATE instruments SET stock = stock + 1, is_available = 1, `condition` = ? WHERE id = ?', 
+          [returnCondition || 'Baik', rental.instrument_id]
+        );
         await connection.query('UPDATE rentals SET actual_return_date = NOW() WHERE id = ?', [id]);
 
         // Calculate late fee automatically
-        const gracePeriod = 24 * 60 * 60 * 1000; // 24 hours grace period
+        // Fetch settings for late fee
+        const [settings] = await connection.query('SELECT `key`, `value` FROM settings WHERE `key` IN ("late_fee_per_day", "grace_period_hours")');
+        
+        let lateFeePerDay = 10000; // Default
+        let gracePeriodHours = 24; 
+
+        settings.forEach(s => {
+          if (s.key === 'late_fee_per_day') lateFeePerDay = parseFloat(s.value);
+          if (s.key === 'grace_period_hours') gracePeriodHours = parseInt(s.value);
+        });
+
+        const gracePeriodMs = gracePeriodHours * 60 * 60 * 1000;
 
         let lateDays = 0;
-        let lateFeePerDay = 10000; // Default Rp 10,000 per day
         let lateFeeTotal = 0;
 
-        if (returnDate > (endDate.getTime() + gracePeriod)) {
-          lateDays = Math.ceil((returnDate - endDate) / (1000 * 60 * 60 * 24));
+        if (returnDate.getTime() > (endDate.getTime() + gracePeriodMs)) {
+          // Calculate actual late days
+          const diffMs = returnDate.getTime() - endDate.getTime();
+          lateDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
           lateFeeTotal = lateDays * lateFeePerDay;
         }
 
@@ -420,6 +459,27 @@ class RentalController {
         updateParams.push(rejectionReason);
       }
 
+      if (status === 'returned') {
+        updateQuery += ', return_condition = ?, damage_notes = ?';
+        updateParams.push(returnCondition, damageNotes);
+        
+        // Trigger notification if damaged
+        if (returnCondition !== 'Baik') {
+          try {
+            await connection.query(
+              'INSERT INTO notifications (type, title, message) VALUES (?, ?, ?)',
+              [
+                'warning', 
+                '⚠️ Laporan Barang Rusak', 
+                `Instrumen "${instrument.name}" dikembalikan oleh "${rental.full_name || 'User'}" dalam kondisi ${returnCondition}. Catatan: ${damageNotes || '-'}`
+              ]
+            );
+          } catch (notiError) {
+            console.error('Failed to create notification:', notiError);
+          }
+        }
+      }
+
       updateQuery += ' WHERE id = ?';
       updateParams.push(id);
 
@@ -432,10 +492,12 @@ class RentalController {
       res.json({ success: true, message: `Status diubah menjadi ${status}`, data: updated[0] });
 
     } catch (error) {
-      await connection.rollback();
-      connection.release();
-      console.error('Error:', error);
-      res.status(500).json({ success: false, message: error.message });
+      if (connection) {
+        await connection.rollback();
+        connection.release();
+      }
+      console.error('[RentalController UpdateStatus Error]:', error);
+      res.status(500).json({ success: false, message: 'Terjadi kesalahan sistem: ' + error.message });
     }
   }
 

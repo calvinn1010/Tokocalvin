@@ -66,7 +66,7 @@ export const deleteInstrument = (id) => api.delete(`/instruments/${id}`);
 export const deleteInstrumentImage = (id) => api.delete(`/instruments/${id}/image`);
 
 // Rental functions
-export const getRentals = () => api.get('/rentals');
+export const getRentals = (params = {}) => api.get('/rentals', { params });
 export const getRental = (id) => api.get(`/rentals/${id}`);
 export const createRental = (rentalData) => api.post('/rentals', rentalData);
 export const createBulkRentals = async (rentalsData) => {
@@ -78,7 +78,7 @@ export const createBulkRentals = async (rentalsData) => {
   });
   return response.data;
 };
-export const updateRentalStatus = (id, status) => api.put(`/rentals/${id}/status`, { status });
+export const updateRentalStatus = (id, status, extraData = {}) => api.put(`/rentals/${id}/status`, { status, ...extraData });
 export const deleteRental = (id) => api.delete(`/rentals/${id}`);
 
 // Category functions
@@ -91,3 +91,8 @@ export const updateFineSettings = (settings) => api.put('/fines/settings', setti
 export const calculateFine = (id, data) => api.post(`/fines/${id}/calculate`, data);
 export const markFinePaid = (id) => api.put(`/fines/${id}/pay`);
 export const getFineStats = () => api.get('/fines/stats');
+
+// Notification functions
+export const getNotifications = () => api.get('/notifications');
+export const markNotificationRead = (id) => api.put(`/notifications/${id}/read`);
+export const clearAllNotifications = () => api.put('/notifications/clear');

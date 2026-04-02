@@ -1012,6 +1012,19 @@ h4, h5, h6 {
 /* ============================================
    CATEGORY SLIDER
    ============================================ */
+/* ============================================
+   NAVBAR Z-INDEX & STICKY FIX
+   ============================================ */
+.navbar {
+  position: sticky !important;
+  top: 0;
+  z-index: 1030 !important;
+}
+
+.navbar .dropdown-menu {
+  z-index: 1050 !important;
+}
+
 .category-slider-wrapper {
   position: relative;
   margin: 0 -15px;
@@ -1103,5 +1116,170 @@ h4, h5, h6 {
   }
   .category-slider-container {
     padding: 10px 20px 20px 20px;
+  }
+}
+
+/* ============================================
+   NOTIFICATIONS
+   ============================================ */
+.badge-notification {
+  font-size: 0.65rem !important;
+  padding: 0.35em 0.65em !important;
+  border-radius: 50% !important;
+  box-shadow: 0 0 10px rgba(220, 53, 69, 0.4);
+}
+
+.notification-dropdown-menu .dropdown-menu {
+  padding: 0;
+  border: none;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  width: 320px;
+}
+
+.notification-item {
+  transition: all 0.2s ease;
+  white-space: normal !important;
+}
+
+.notification-item:hover {
+  background-color: rgba(102, 126, 234, 0.05) !important;
+}
+
+.bg-unread {
+  background-color: rgba(102, 126, 234, 0.08) !important;
+}
+
+.bg-warning-soft {
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.bg-primary-soft {
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
+.x-small {
+  font-size: 0.8rem;
+}
+
+.xx-small {
+  font-size: 0.7rem;
+}
+
+.hover-bg-light:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+.notification-scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notification-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notification-scroll-area::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.2);
+  border-radius: 10px;
+}
+
+.notification-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.4);
+}
+
+/* ============================================
+   MODERN NAVBAR COMPONENTS
+   ============================================ */
+.avatar-circle-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.user-profile-trigger {
+  padding: 4px 12px 4px 4px !important;
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-profile-trigger:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.notification-bell-wrapper {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+}
+
+.notification-bell-wrapper:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  transform: rotate(15deg);
+}
+
+.notification-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 0.65rem !important;
+  padding: 0.35em 0.5em !important;
+  border: 2px solid #1a1c23; /* Matching navbar bg */
+}
+
+.theme-toggle-btn {
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-width: 1px;
+}
+
+.theme-toggle-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+}
+
+.tracking-tighter {
+  letter-spacing: -0.02em;
+}
+
+/* Fix for light mode text inside dark navbar */
+.text-dark-mode-sensitive {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Mobile adjustments */
+@media (max-width: 991.98px) {
+  .user-profile-trigger {
+    background: transparent;
+    border: none;
+    padding: 10px 0 !important;
+  }
+  
+  .ms-auto.align-items-center {
+    align-items: flex-start !important;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .notification-bell-wrapper {
+    margin-bottom: 10px;
   }
 }

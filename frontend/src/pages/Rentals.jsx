@@ -11,6 +11,13 @@ const Rentals = () => {
   const [instruments, setInstruments] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  
+  // Return Modal State
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [selectedRental, setSelectedRental] = useState(null);
+  const [returnCondition, setReturnCondition] = useState('Baik');
+  const [damageNotes, setDamageNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadRentals();
@@ -60,15 +67,26 @@ const Rentals = () => {
   };
 
 
-  const handleUpdateStatus = async (id, status) => {
+  const handleUpdateStatus = async (id, status, extraData = {}) => {
     try {
-      await updateRentalStatus(id, status);
+      setSubmitting(true);
+      await updateRentalStatus(id, status, extraData);
       setSuccess(`Status berhasil diubah menjadi ${status}`);
       loadRentals();
+      setShowReturnModal(false);
+      setReturnCondition('Baik');
+      setDamageNotes('');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.response?.data?.message || 'Gagal mengubah status');
+    } finally {
+      setSubmitting(false);
     }
+  };
+
+  const handleShowReturnModal = (rental) => {
+    setSelectedRental(rental);
+    setShowReturnModal(true);
   };
 
   const handleDelete = async (id) => {
@@ -303,7 +321,7 @@ const Rentals = () => {
                               variant="outline-secondary"
                               size="sm"
                               className="btn-modern"
-                              onClick={() => handleUpdateStatus(rental.id, 'returned')}
+                              onClick={() => handleShowReturnModal(rental)}
                             >
                               <i className="bi bi-check-all me-1"></i>
                               Kembali
@@ -330,6 +348,76 @@ const Rentals = () => {
             </div>
           </Card.Body>
         </Card>
+
+        {/* Return Modal */}
+        <Modal show={showReturnModal} onHide={() => !submitting && setShowReturnModal(false)} centered>
+          <Modal.Header closeButton={!submitting}>
+            <Modal.Title className="fw-bold fs-5">
+              <i className="bi bi-box-arrow-in-left me-2 text-primary"></i>
+              Proses Pengembalian
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body className="py-4">
+            {selectedRental && (
+              <div className="mb-4 p-3 bg-light rounded border-start border-4 border-primary">
+                <div className="fw-bold">{selectedRental.instrument.name}</div>
+                <div className="small text-muted">Dipinjam oleh: {selectedRental.user.fullName}</div>
+              </div>
+            )}
+            
+            <Form>
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-semibold small text-uppercase text-muted">Kondisi Alat Musik Saat Kembali</Form.Label>
+                <div className="d-flex gap-2">
+                  {['Baik', 'Cukup', 'Rusak'].map((cond) => (
+                    <Button
+                      key={cond}
+                      variant={returnCondition === cond ? (cond === 'Baik' ? 'success' : cond === 'Cukup' ? 'warning' : 'danger') : 'outline-secondary'}
+                      className="flex-grow-1 py-2 btn-modern border-2"
+                      onClick={() => setReturnCondition(cond)}
+                    >
+                      {cond === 'Baik' && <i className="bi bi-shield-check me-1"></i>}
+                      {cond === 'Cukup' && <i className="bi bi-shield-exclamation me-1"></i>}
+                      {cond === 'Rusak' && <i className="bi bi-shield-slash me-1"></i>}
+                      {cond}
+                    </Button>
+                  ))}
+                </div>
+              </Form.Group>
+
+              <Form.Group className="mb-0">
+                <Form.Label className="fw-semibold small text-uppercase text-muted">Catatan Kerusakan (Opsional)</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  placeholder={returnCondition === 'Baik' ? "Opsional..." : "Jelaskan detail kerusakan..."}
+                  value={damageNotes}
+                  onChange={(e) => setDamageNotes(e.target.value)}
+                  className="bg-light border-0"
+                  required={returnCondition !== 'Baik'}
+                />
+                {returnCondition !== 'Baik' && !damageNotes && (
+                  <Form.Text className="text-danger small">
+                    Mohon jelaskan kondisi kerusakan.
+                  </Form.Text>
+                )}
+              </Form.Group>
+            </Form>
+          </Modal.Body>
+          <Modal.Footer className="border-0 pb-4 px-4">
+            <Button variant="light" onClick={() => setShowReturnModal(false)} disabled={submitting} className="btn-modern px-4">
+              Batal
+            </Button>
+            <Button 
+              variant="primary" 
+              className="btn-modern px-4"
+              disabled={submitting || (returnCondition !== 'Baik' && !damageNotes)}
+              onClick={() => handleUpdateStatus(selectedRental.id, 'returned', { returnCondition, damageNotes })}
+            >
+              {submitting ? 'Memproses...' : 'Konfirmasi Kembali'}
+            </Button>
+          </Modal.Footer>
+        </Modal>
 
         </Container>
       </div>
